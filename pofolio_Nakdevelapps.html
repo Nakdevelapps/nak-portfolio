@@ -1,0 +1,3972 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio 3D - Cockpit Spatial</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            background: #000;
+            cursor: none; /* Cacher le curseur par défaut */
+        }
+        
+        /* Curseur custom centré et ancré */
+        #custom-cursor {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            pointer-events: none;
+            z-index: 10000;
+            transition: opacity 0.2s ease;
+        }
+        
+        #custom-cursor.hidden {
+            opacity: 0;
+        }
+        
+        .cursor-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px;
+            height: 4px;
+            background: #00ffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+        }
+        
+        .cursor-line {
+            position: absolute;
+            background: rgba(0, 255, 255, 0.6);
+        }
+        
+        .cursor-line.horizontal {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+        
+        .cursor-line.vertical {
+            left: 50%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+        
+        .cursor-corner {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #ff00ff;
+        }
+        
+        .cursor-corner.top-left {
+            top: -10px;
+            left: -10px;
+            border-right: none;
+            border-bottom: none;
+        }
+        
+        .cursor-corner.top-right {
+            top: -10px;
+            right: -10px;
+            border-left: none;
+            border-bottom: none;
+        }
+        
+        .cursor-corner.bottom-left {
+            bottom: -10px;
+            left: -10px;
+            border-right: none;
+            border-top: none;
+        }
+        
+        .cursor-corner.bottom-right {
+            bottom: -10px;
+            right: -10px;
+            border-left: none;
+            border-top: none;
+        }
+        
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        
+        #speed-meter {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: #ff00ff;
+            text-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        #skill-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.15), rgba(0, 255, 255, 0.15));
+            border: 2px solid #ff00ff;
+            padding: 25px 35px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.4), inset 0 0 30px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        
+        #skill-display.active {
+            opacity: 1;
+            animation: glitch 0.3s infinite;
+        }
+        
+        #skill-display h2 {
+            font-size: 22px;
+            margin-bottom: 12px;
+            text-shadow: 0 0 12px #ff00ff;
+            letter-spacing: 1px;
+        }
+        
+        #skill-display p {
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+            color: #00ffff;
+        }
+        
+        #skill-display ul {
+            list-style: none;
+            text-align: left;
+            margin-top: 12px;
+        }
+        
+        #skill-display li {
+            margin: 6px 0;
+            padding-left: 15px;
+            position: relative;
+            font-size: 11px;
+            color: #fff;
+        }
+        
+        #skill-display li:before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #ff00ff;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(-50%, -50%); }
+            20% { transform: translate(-50.5%, -50.2%); }
+            40% { transform: translate(-49.8%, -50.1%); }
+            60% { transform: translate(-50.2%, -49.9%); }
+            80% { transform: translate(-50.1%, -50.3%); }
+            100% { transform: translate(-50%, -50%); }
+        }
+        
+        #controls-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            padding: 8px 12px;
+            color: #ff00ff;
+            font-size: 10px;
+            text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+            z-index: 100;
+            border-radius: 5px;
+            max-width: 180px;
+        }
+        
+        #progress-bar {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            z-index: 100;
+            overflow: hidden;
+            border-radius: 3px;
+        }
+        
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
+        }
+        
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                transparent 0%, 
+                rgba(0, 255, 255, 0.05) 50%, 
+                transparent 100%);
+            animation: scan 8s linear infinite;
+            pointer-events: none;
+            z-index: 150;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        
+        @keyframes skillPopIn {
+            0% { 
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes skillPopOut {
+            0% { 
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        
+        @keyframes slideInUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes neonGlow {
+            0%, 100% { text-shadow: 0 0 10px currentColor, 0 0 20px currentColor; }
+            50% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor; }
+        }
+        
+        #minigame-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, rgba(0, 5, 16, 0.98), rgba(26, 0, 51, 0.98));
+            backdrop-filter: blur(20px);
+            z-index: 300;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        #minigame-container.active {
+            display: flex;
+        }
+        
+        #minigame-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 900;
+            background: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            text-align: center;
+            animation: neonGlow 2s ease-in-out infinite, gradientShift 3s ease infinite;
+            letter-spacing: 4px;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+        }
+        
+        #minigame-canvas-wrapper {
+            position: relative;
+            animation: slideInUp 0.5s ease;
+        }
+        
+        #minigame-canvas {
+            border: 4px solid transparent;
+            background: linear-gradient(#000510, #000510) padding-box,
+                        linear-gradient(135deg, #ff00ff, #00ffff) border-box;
+            box-shadow: 
+                0 0 60px rgba(255, 0, 255, 0.6),
+                0 0 100px rgba(0, 255, 255, 0.4),
+                inset 0 0 40px rgba(0, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        #minigame-stats {
+            position: absolute;
+            top: -50px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .stat-item {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ffff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: #00ffff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+        
+        #minigame-score {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 25px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        #minigame-instructions {
+            font-family: 'Share Tech Mono', monospace;
+            color: #ffffff;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 16px;
+            max-width: 700px;
+            line-height: 1.6;
+            background: rgba(102, 0, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+        }
+        
+        #minigame-close {
+            margin-top: 25px;
+            padding: 18px 50px;
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            border: none;
+            border-radius: 50px;
+            color: #000;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        #minigame-close:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 0 50px rgba(255, 0, 255, 1), 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        #minigame-close:active {
+            transform: scale(1.05);
+        }
+        
+        #exploration-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.15), rgba(0, 255, 255, 0.15));
+            border: 3px solid #00ffff;
+            padding: 30px 40px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            z-index: 250;
+            opacity: 1;
+            pointer-events: none;
+            transition: opacity 1s ease;
+            border-radius: 15px;
+            max-width: 500px;
+        }
+        
+        #exploration-hint.hidden {
+            opacity: 0;
+        }
+        
+        #exploration-hint h3 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        #exploration-hint p {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #00ffff;
+        }
+        
+        #camera-controls {
+            position: absolute;
+            bottom: 120px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ff00ff;
+            padding: 20px;
+            border-radius: 15px;
+            color: #ff00ff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
+        }
+        
+        #camera-controls h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        
+        .key-badge {
+            background: linear-gradient(135deg, #ff00ff, #6600ff);
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-right: 10px;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+        
+
+        
+        .particle-popup {
+            position: absolute;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 200;
+            animation: floatUp 2s ease-out forwards;
+        }
+        
+        @keyframes floatUp {
+            from {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100px) scale(1.5);
+                opacity: 0;
+            }
+        }
+        
+        /* Panneau de contrôles repliable */
+        #camera-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            padding: 0;
+            border-radius: 4px;
+            color: #ff00ff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 8px;
+            z-index: 100;
+            max-width: 140px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            max-height: 24px;
+        }
+        
+        #camera-controls.expanded {
+            max-height: 180px;
+            padding: 8px 10px;
+        }
+        
+        #camera-controls h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 9px;
+            margin: 0;
+            padding: 6px 10px;
+            color: #00ffff;
+            text-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        #camera-controls h4:hover {
+            background: rgba(255, 0, 255, 0.1);
+        }
+        
+        .toggle-icon {
+            transition: transform 0.3s ease;
+            font-size: 8px;
+        }
+        
+        #camera-controls.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+        
+        .controls-content {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease, max-height 0.3s ease;
+        }
+        
+        #camera-controls.expanded .controls-content {
+            opacity: 1;
+            max-height: 180px;
+            margin-top: 6px;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+        }
+        
+        .key-badge {
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.3), rgba(102, 0, 255, 0.3));
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 6px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+            font-size: 8px;
+            border: 1px solid rgba(255, 0, 255, 0.5);
+        }
+        
+        .control-row span {
+            font-size: 9px;
+        }
+        
+        #fps-counter {
+            position: absolute;
+            top: 55px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 5px 10px;
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            z-index: 100;
+            border-radius: 3px;
+        }
+        
+        #xp-bar-container {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 280px;
+            z-index: 100;
+        }
+        
+        #level-display {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffff00;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
+            margin-bottom: 4px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            border-radius: 3px;
+        }
+        
+        #xp-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 0, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            box-shadow: 0 0 12px rgba(255, 255, 0, 0.3);
+        }
+        
+        #interaction-prompt {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #00ffff;
+            padding: 10px 20px;
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 100;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            text-shadow: 0 0 8px #00ffff;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        #exploration-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.1), rgba(0, 255, 255, 0.1));
+            border: 2px solid #00ffff;
+            padding: 20px 30px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            box-shadow: 0 0 35px rgba(0, 255, 255, 0.5);
+            backdrop-filter: blur(20px);
+            z-index: 250;
+            opacity: 1;
+            pointer-events: none;
+            transition: opacity 1s ease;
+            border-radius: 8px;
+            max-width: 380px;
+        }
+        
+        #exploration-hint.hidden {
+            opacity: 0;
+        }
+        
+        #exploration-hint h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        #exploration-hint p {
+            font-size: 10px;
+            line-height: 1.5;
+            color: #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div class="scanline"></div>
+    
+    <!-- Curseur custom centré et ancré -->
+    <div id="custom-cursor">
+        <div class="cursor-center"></div>
+        <div class="cursor-line horizontal"></div>
+        <div class="cursor-line vertical"></div>
+        <div class="cursor-corner top-left"></div>
+        <div class="cursor-corner top-right"></div>
+        <div class="cursor-corner bottom-left"></div>
+        <div class="cursor-corner bottom-right"></div>
+    </div>
+    
+    
+    <div id="speed-meter">
+        VITESSE: <span id="speed">0</span>
+    </div>
+    
+    <div id="progress-bar">
+        <div id="progress-fill"></div>
+    </div>
+    
+    <div id="skill-display">
+        <h2 id="skill-title">Titre</h2>
+        <p id="skill-desc">Description</p>
+        <ul id="skill-features"></ul>
+    </div>
+    
+    <div id="controls-hint">
+        Z Avancer • S Reculer<br>
+        Q Gauche • D Droite<br>
+        <span style="color: #00ffff;">ESPACE : Sauter</span>
+    </div>
+    
+    <div id="camera-controls">
+        <h4 onclick="document.getElementById('camera-controls').classList.toggle('expanded')">
+            Contrôles <span class="toggle-icon">▼</span>
+        </h4>
+        <div class="controls-content">
+            <div class="control-row">
+                <div class="key-badge">SOURIS</div>
+                <span>Caméra 360°</span>
+            </div>
+            <div class="control-row">
+                <div class="key-badge">Z S</div>
+                <span>Avancer/Reculer</span>
+            </div>
+            <div class="control-row">
+                <div class="key-badge">Q D</div>
+                <span>Strafe Gauche/Droite</span>
+            </div>
+            <div class="control-row">
+                <div class="key-badge">FLÈCHES</div>
+                <span>Aussi disponibles</span>
+            </div>
+            <div class="control-row">
+                <div class="key-badge">ESPACE</div>
+                <span>Sauter</span>
+            </div>
+            <div class="control-row">
+                <div class="key-badge">F</div>
+                <span>Interagir / Mini-jeux</span>
+            </div>
+            <div class="control-row">
+                <div class="key-badge">I</div>
+                <span>Inventaire</span>
+            </div>
+            <div class="control-row">
+                <div class="key-badge">ALT</div>
+                <span>Curseur libre</span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="fps-counter">FPS: 60</div>
+    
+    <div id="xp-bar-container">
+        <div id="level-display">NIVEAU 1 - XP: 0 / 100</div>
+        <div id="xp-bar">
+            <div id="xp-fill"></div>
+        </div>
+    </div>
+    
+    <div id="interaction-prompt">Appuyez sur [F] pour interagir</div>
+    
+    <div id="exploration-hint">
+        <h3>GAME PORTFOLIO INTERACTIF</h3>
+        <p><strong>EXPLOREZ</strong> les forêts pour découvrir mes compétences !<br>
+        <strong style="color: #00ff00;">CHEST Coffres</strong> et <strong style="color: #ff00ff;">ATTACK Monstres</strong> révèlent des compétences<br>
+        <strong>F</strong> pour interagir • <strong>I</strong> pour voir l'inventaire<br>
+        <strong>FLÈCHES</strong> pour se déplacer • <strong>ESPACE</strong> pour sauter<br><br>
+        <strong style="color: #ffff00;">Découvrez mes ${allDiscoveries.length} compétences cachées !</strong></p>
+    </div>
+    
+    <div id="minigame-container">
+        <button id="minigame-close-x" onclick="closeMiniGame()" style="
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 0, 0, 0.8);
+            border: 2px solid #ff0000;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10001;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(255, 0, 0, 1)'; this.style.transform='scale(1.1)'" 
+           onmouseout="this.style.background='rgba(255, 0, 0, 0.8)'; this.style.transform='scale(1)'">X</button>
+        <div id="minigame-title">MINI-JEU</div>
+        <div id="minigame-canvas-wrapper">
+            <div id="minigame-stats">
+                <div class="stat-item" id="stat-timer">TEMPS: 30s</div>
+                <div class="stat-item" id="stat-level">NIVEAU: 1</div>
+            </div>
+            <canvas id="minigame-canvas" width="700" height="500"></canvas>
+        </div>
+        <div id="minigame-score">SCORE: 0</div>
+        <div id="minigame-instructions">Instructions du jeu</div>
+        <button id="minigame-close">FERMER [ESC]</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // SYSTÈME DE DÉCOUVERTE DE COMPÉTENCES - Basé sur le CV
+        const skillDiscoveries = {
+            languages: [
+                { name: 'JavaScript', icon: '>', color: '#f7df1e', description: 'VanillaJS, Node.js, React, Three.js, Vue.js' },
+                { name: 'Python', icon: '[PYTHON]', color: '#3776ab', description: 'Django, Data Processing' },
+                { name: 'C#', icon: 'GAME', color: '#68217a', description: 'Unity, Visual Studio, Desktop Apps' },
+                { name: 'PHP', icon: '[PHP]', color: '#777bb3', description: 'Laravel, Symfony, Web Dev' },
+                { name: 'Java', icon: '[JAVA]', color: '#f89820', description: 'Modding, Backend' }
+            ],
+            technologies: [
+                { name: 'React', icon: '[REACT]', color: '#61dafb', description: 'Modern UI Framework' },
+                { name: 'Vue.js', icon: '[VUE]', color: '#42b883', description: 'Progressive Framework' },
+                { name: 'Three.js', icon: '[3D]', color: '#ff00ff', description: '3D Graphics Library' },
+                { name: 'Unity', icon: 'GAME', color: '#ffffff', description: 'Game Engine' },
+                { name: 'Unreal', icon: '[UNREAL]', color: '#313131', description: 'AAA Game Engine' },
+                { name: 'MongoDB', icon: '[MONGO]', color: '#47a248', description: 'NoSQL Database' },
+                { name: 'Redis', icon: '[REDIS]', color: '#dc382d', description: 'Cache & Data Store' }
+            ],
+            projects: [
+                { name: 'Bot Discord IA', icon: '[BOT]', color: '#5865f2', description: 'Modération auto + API IA' },
+                { name: 'Site Trading', icon: 'TRADING', color: '#00ff00', description: 'Market Microstructure' },
+                { name: 'Jeu Open World', icon: 'GAME', color: '#ff00ff', description: 'Gameplay & UI/UX Design' },
+                { name: 'App Cross-Platform', icon: '[APP]', color: '#ffaa00', description: 'Vendu 1 000€ - PC & Android' }
+            ],
+            certifications: [
+                { name: 'DUT Informatique', icon: '[EDU]', color: '#0066cc', description: 'IUT Villetaneuse (1996)' },
+                { name: 'Bac Mention', icon: '[CERT]', color: '#00aa00', description: 'Lycée Romain Rolland (1993)' }
+            ]
+        };
+        
+        // Tableau de toutes les découvertes possibles
+        let allDiscoveries = [];
+        Object.values(skillDiscoveries).forEach(category => {
+            allDiscoveries = allDiscoveries.concat(category);
+        });
+        
+        // Découvertes déjà obtenues
+        let discoveredSkills = [];
+        
+        // Configuration des compétences avec mini-jeux
+        const skills = [
+            {
+                position: 50,
+                title: "Plateforme de Trading Nouvelle Génération",
+                subtitle: "(En cours de développement)",
+                description: "Solution d'analyse de flux boursiers haute performance avec visualisation en temps réel.",
+                features: [
+                    "Visualisation : Footprint, DOM (Depth of Market), Time & Sales",
+                    "Indicateurs avancés : VWAP et outils personnalisés",
+                    "Double mode : Graphiques interactifs + Tableaux de données brutes",
+                    "Technologies : JavaScript, C#, Python"
+                ],
+                miniGame: 'trading'
+            },
+            {
+                position: 150,
+                title: "Application Commerciale Multi-plateforme",
+                subtitle: "(Vendu 1 000 €)",
+                description: "Application métier optimisée pour un usage cross-platform, finalisée et vendue avec succès.",
+                features: [
+                    "Support complet : PC et Android",
+                    "Solution prête pour le marché",
+                    "Client privé satisfait",
+                    "Démonstration de capacité de livraison professionnelle"
+                ],
+                miniGame: 'platformer'
+            }
+        ];
+        
+        // Variables globales
+        let scene, camera, renderer;
+        let cockpitGroup, starField, skillHolograms = [];
+        let pixelWorld, backgroundMountains, glitchSky;
+        let cameraPosition = 0;
+        let cameraSpeed = 0;
+        let currentSkillIndex = -1;
+        let miniGameActive = false;
+        let miniGameData = {};
+        
+        // Variables d'exploration
+        let freeCameraRotationY = 0;
+        let freeCameraRotationX = 0;
+        let freeCameraX = 0;
+        let freeCameraY = 0;
+        let baseCameraY = 0; // Position Y de départ
+        let turboMode = false;
+        
+        // Variables de saut
+        let isJumping = false;
+        let jumpVelocity = 0;
+        let gravity = 0.5;
+        let jumpPower = 5; // Réduit pour un saut plus réaliste
+        
+        // Head bobbing (balancement de tête en marchant)
+        let headBobTime = 0;
+        let headBobIntensity = 0.08; // Amplitude du balancement vertical
+        let headBobSpeed = 0.15; // Vitesse du balancement
+        let headBobActive = false;
+        
+        // Contrôle souris
+        let mouseX = 0;
+        let mouseY = 0;
+        let altPressed = false;
+        let isPointerLocked = false;
+        let userRequestedUnlock = false; // Nouvelle variable pour tracker si l'utilisateur a volontairement déverrouillé
+        
+        // Système de jeu
+        let playerExp = 0;
+        let playerLevel = 1;
+        let chests = [];
+        let monsters = [];
+        let nearestChest = null;
+        let nearestMonster = null;
+        let enchantedForest, darkForest;
+        
+        // FPS Counter
+        let lastTime = performance.now();
+        let frames = 0;
+        let fps = 60;
+        
+        const keys = {};
+        const maxPosition = 160; // Limite réduite pour le monde pixelisé
+        
+        // ===== SYSTÈME DE COLLISION AABB =====
+        const colliders = [];
+        
+        class Collider {
+            constructor(x, y, z, width, height, depth, name = 'Obstacle') {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+                this.width = width;
+                this.height = height;
+                this.depth = depth;
+                this.name = name;
+            }
+            
+            // Vérifier collision avec une sphère (joueur)
+            intersectsSphere(cx, cy, cz, radius) {
+                const closestX = Math.max(this.x - this.width / 2, Math.min(cx, this.x + this.width / 2));
+                const closestY = Math.max(this.y - this.height / 2, Math.min(cy, this.y + this.height / 2));
+                const closestZ = Math.max(this.z - this.depth / 2, Math.min(cz, this.z + this.depth / 2));
+                
+                const distanceX = cx - closestX;
+                const distanceY = cy - closestY;
+                const distanceZ = cz - closestZ;
+                
+                const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY) + (distanceZ * distanceZ);
+                
+                return distanceSquared < (radius * radius);
+            }
+        }
+        
+        function addCollider(x, y, z, width, height, depth, name = 'Obstacle') {
+            const collider = new Collider(x, y, z, width, height, depth, name);
+            colliders.push(collider);
+            return collider;
+        }
+        
+        function checkCollision(newX, newY, newZ, radius = 1) {
+            for (let i = 0; i < colliders.length; i++) {
+                if (colliders[i].intersectsSphere(newX, newY, newZ, radius)) {
+                    return colliders[i];
+                }
+            }
+            return null;
+        }
+        
+        function resolveCollision(currentX, currentY, currentZ, targetX, targetY, targetZ, collider, radius = 1) {
+            let resolvedX = currentX;
+            let resolvedY = currentY;
+            let resolvedZ = currentZ;
+            
+            // Essayer mouvement X seulement
+            if (!checkCollision(targetX, currentY, currentZ, radius)) {
+                resolvedX = targetX;
+            }
+            
+            // Essayer mouvement Z seulement
+            if (!checkCollision(currentX, currentY, targetZ, radius)) {
+                resolvedZ = targetZ;
+            }
+            
+            // Essayer mouvement Y seulement (saut)
+            if (!checkCollision(currentX, targetY, currentZ, radius)) {
+                resolvedY = targetY;
+            }
+            
+            return { x: resolvedX, y: resolvedY, z: resolvedZ };
+        }
+        
+        // Initialisation
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x000000, 1, 300);
+            
+            // Camera - Position de départ à Y=2 (au-dessus du sol)
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 2, 5); // Y=2 pour être debout au-dessus du sol
+            camera.rotation.order = 'YXZ'; // IMPORTANT : Ordre de rotation FPS (Yaw, Pitch, Roll)
+            baseCameraY = 2; // Point d'ancrage à Y=2 (hauteur des yeux)
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000510);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Lumières
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+            
+            const frontLight = new THREE.PointLight(0x00ffff, 1, 100);
+            frontLight.position.set(0, 0, 10);
+            scene.add(frontLight);
+            
+            const backLight = new THREE.PointLight(0xff00ff, 0.8, 100);
+            backLight.position.set(0, 0, -10);
+            scene.add(backLight);
+            
+            // Créer le cockpit
+            createCockpit();
+            
+            // Créer le champ d'étoiles
+            createStarField();
+            
+            // Créer les hologrammes de compétences
+            createSkillHolograms();
+            
+            // Créer la grille rétro
+            createRetroGrid();
+            
+            // Créer un SOL PRINCIPAL invisible pour empêcher de tomber
+            const mainGroundGeometry = new THREE.PlaneGeometry(200, 400);
+            const mainGroundMaterial = new THREE.MeshBasicMaterial({ 
+                visible: false,
+                transparent: true,
+                opacity: 0,
+                side: THREE.DoubleSide
+            });
+            const mainGround = new THREE.Mesh(mainGroundGeometry, mainGroundMaterial);
+            mainGround.rotation.x = -Math.PI / 2;
+            mainGround.position.set(0, 0, -80);
+            scene.add(mainGround);
+            
+            // Décaler le sol principal aussi
+            mainGround.position.y += 12;
+            
+            // Créer les forêts avec interactions
+            createEnchantedForest();
+            createDarkForest();
+            
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            
+            // POINTER LOCK - Verrouiller la souris dans la frame automatiquement
+            const requestPointerLock = () => {
+                if (!altPressed && !miniGameActive) {
+                    renderer.domElement.requestPointerLock();
+                    console.log('Requesting pointer lock...');
+                }
+            };
+            
+            // Activer le pointer lock au clic sur la page
+            renderer.domElement.addEventListener('click', () => {
+                console.log('Canvas clicked');
+                userRequestedUnlock = false; // L'utilisateur veut le verrouillage
+                requestPointerLock();
+            });
+            
+            // Gérer les changements d'état du pointer lock
+            const handlePointerLockChange = () => {
+                isPointerLocked = document.pointerLockElement === renderer.domElement;
+                
+                console.log('Pointer lock state:', isPointerLocked);
+                
+                // Mettre à jour le curseur custom
+                if (isPointerLocked && !altPressed) {
+                    document.getElementById('custom-cursor').classList.remove('hidden');
+                    document.body.style.cursor = 'none';
+                } else {
+                    document.getElementById('custom-cursor').classList.add('hidden');
+                    document.body.style.cursor = 'default';
+                }
+                
+                // Réactiver automatiquement SI l'utilisateur n'a PAS volontairement déverrouillé avec ESC
+                if (!isPointerLocked && !userRequestedUnlock && !altPressed && !miniGameActive) {
+                    setTimeout(() => {
+                        if (!userRequestedUnlock && !altPressed && !miniGameActive) {
+                            console.log('Auto-reactivating pointer lock (user did not request unlock)...');
+                            requestPointerLock();
+                        }
+                    }, 100);
+                }
+            };
+            
+            document.addEventListener('pointerlockchange', handlePointerLockChange);
+            document.addEventListener('pointerlockerror', (e) => {
+                console.error('Pointer lock error:', e);
+            });
+            
+            // Pas de pop-in - Le joueur clique simplement pour commencer
+            
+            // Gestion du clavier
+            document.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+                
+                // Touche ESC pour libérer le curseur
+                if (e.key === 'Escape') {
+                    if (miniGameActive) {
+                        closeMiniGame();
+                    } else if (isPointerLocked) {
+                        // Libérer le pointer lock VOLONTAIREMENT
+                        userRequestedUnlock = true; // Marquer comme déverrouillage volontaire
+                        document.exitPointerLock();
+                        isPointerLocked = false;
+                        document.getElementById('custom-cursor').classList.add('hidden');
+                        document.body.style.cursor = 'default';
+                        e.preventDefault();
+                    } else {
+                        // Fermer l'inventaire si ouvert
+                        const inventory = document.getElementById('skills-inventory');
+                        if (inventory) inventory.style.display = 'none';
+                    }
+                }
+                
+                // Touche I pour ouvrir l'inventaire des compétences
+                if (e.key === 'i' || e.key === 'I') {
+                    toggleSkillsInventory();
+                }
+                
+                // Touche ALT pour libérer temporairement le curseur
+                if (e.key === 'Alt') {
+                    altPressed = true;
+                    document.exitPointerLock();
+                    isPointerLocked = false;
+                    document.getElementById('custom-cursor').classList.add('hidden');
+                    document.body.style.cursor = 'default';
+                }
+                
+                // Touche F pour interagir ET lancer les mini-jeux
+                if (e.key === 'f' || e.key === 'F') {
+                    // Priorité 1 : Interaction avec coffres/monstres
+                    if (nearestChest || nearestMonster) {
+                        interact();
+                    }
+                    // Priorité 2 : Lancer le mini-jeu si près d'une compétence
+                    else if (currentSkillIndex >= 0 && !miniGameActive) {
+                        const skill = skills[currentSkillIndex];
+                        if (skill && skill.miniGame) {
+                            startMiniGame(skill.miniGame);
+                        }
+                    }
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+                
+                if (e.key === 'Alt') {
+                    altPressed = false;
+                    document.getElementById('custom-cursor').classList.remove('hidden');
+                    document.body.style.cursor = 'none';
+                    // Réactiver le pointer lock
+                    requestPointerLock();
+                }
+            });
+            
+            // Mouvement de la souris (avec pointer lock)
+            document.addEventListener('mousemove', (e) => {
+                // Capturer le mouvement si pas en mini-jeu
+                if (!miniGameActive) {
+                    mouseX = e.movementX || 0;
+                    mouseY = e.movementY || 0;
+                }
+            });
+            
+            // Bouton de fermeture
+            document.getElementById('minigame-close').addEventListener('click', closeMiniGame);
+            
+            // Message d'accueil - 1 seconde
+            setTimeout(() => {
+                document.getElementById('exploration-hint').classList.add('hidden');
+            }, 1000);
+            
+            // Initialiser le compteur de compétences
+            updateSkillCounter();
+            
+            animate();
+        }
+        
+        function updateFPS() {
+            frames++;
+            const currentTime = performance.now();
+            
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frames * 1000) / (currentTime - lastTime));
+                document.getElementById('fps-counter').textContent = `FPS: ${fps}`;
+                frames = 0;
+                lastTime = currentTime;
+            }
+        }
+        
+        function createCockpit() {
+            cockpitGroup = new THREE.Group();
+            
+            // Panneau de contrôle principal
+            const panelGeometry = new THREE.BoxGeometry(8, 4, 0.2);
+            const panelMaterial = new THREE.MeshPhongMaterial({
+                color: 0x1a1a2e,
+                emissive: 0x0f0f1e,
+                shininess: 100
+            });
+            const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+            panel.position.set(0, -2, 3);
+            panel.rotation.x = Math.PI / 6;
+            cockpitGroup.add(panel);
+            
+            // Écrans latéraux
+            for (let i = -1; i <= 1; i += 2) {
+                const screenGeometry = new THREE.PlaneGeometry(2, 1.5);
+                const screenMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                const screen = new THREE.Mesh(screenGeometry, screenMaterial);
+                screen.position.set(i * 4, 0, 2);
+                screen.rotation.y = -i * Math.PI / 6;
+                cockpitGroup.add(screen);
+                
+                // Bordure d'écran
+                const borderGeometry = new THREE.EdgesGeometry(screenGeometry);
+                const borderMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff });
+                const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+                screen.add(border);
+            }
+            
+            // Boutons et détails
+            for (let i = 0; i < 12; i++) {
+                const buttonGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16);
+                const buttonMaterial = new THREE.MeshPhongMaterial({
+                    color: Math.random() > 0.5 ? 0xff00ff : 0x00ffff,
+                    emissive: Math.random() > 0.5 ? 0xff00ff : 0x00ffff,
+                    emissiveIntensity: 0.5
+                });
+                const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
+                button.position.set(
+                    (i % 4 - 1.5) * 1.5,
+                    -2 + Math.floor(i / 4) * 0.5,
+                    3.2
+                );
+                button.rotation.x = Math.PI / 2;
+                cockpitGroup.add(button);
+            }
+            
+            // Structure du cockpit (cadre)
+            const frameGeometry = new THREE.TorusGeometry(6, 0.2, 16, 100, Math.PI);
+            const frameMaterial = new THREE.MeshPhongMaterial({
+                color: 0x333344,
+                emissive: 0x6600ff,
+                emissiveIntensity: 0.3
+            });
+            const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+            frame.position.z = 4;
+            frame.rotation.x = Math.PI;
+            cockpitGroup.add(frame);
+            
+            scene.add(cockpitGroup);
+            
+            // Décaler le cockpit de +12 unités pour correspondre au nouveau système Y=0
+            cockpitGroup.position.y = 12;
+        }
+        
+        function createStarField() {
+            // Groupe principal pour le monde pixelisé
+            pixelWorld = new THREE.Group();
+            
+            // SOL - Style platformer rétro
+            const groundLength = 400;
+            const groundSegments = 80;
+            const segmentSize = groundLength / groundSegments;
+            
+            for (let i = 0; i < groundSegments; i++) {
+                const z = -groundLength / 2 + i * segmentSize;
+                
+                // Blocs de sol principaux
+                const blockGeometry = new THREE.BoxGeometry(40, 1, segmentSize * 0.8);
+                const colorChoice = Math.random();
+                let blockColor;
+                
+                if (colorChoice > 0.7) blockColor = 0xff00ff; // Magenta
+                else if (colorChoice > 0.4) blockColor = 0x00ffff; // Cyan
+                else blockColor = 0x6600ff; // Violet
+                
+                const blockMaterial = new THREE.MeshPhongMaterial({
+                    color: blockColor,
+                    emissive: blockColor,
+                    emissiveIntensity: 0.3,
+                    flatShading: true
+                });
+                
+                const block = new THREE.Mesh(blockGeometry, blockMaterial);
+                block.position.set(0, -12, z);
+                pixelWorld.add(block);
+                
+                // Bordures des blocs (style pixel art)
+                const edges = new THREE.EdgesGeometry(blockGeometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+                const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                block.add(wireframe);
+            }
+            
+            // PLATEFORMES FLOTTANTES style Mario
+            const platforms = [
+                { x: -15, y: -5, z: -30, w: 10, h: 2, d: 10, color: 0xff00ff },
+                { x: 15, y: -3, z: -60, w: 12, h: 2, d: 8, color: 0x00ffff },
+                { x: -12, y: -7, z: -90, w: 8, h: 2, d: 12, color: 0xff00ff },
+                { x: 18, y: -4, z: -120, w: 10, h: 2, d: 10, color: 0x00ffff },
+                { x: -16, y: -6, z: -150, w: 14, h: 2, d: 10, color: 0x6600ff },
+            ];
+            
+            platforms.forEach(plat => {
+                const platGeometry = new THREE.BoxGeometry(plat.w, plat.h, plat.d);
+                const platMaterial = new THREE.MeshPhongMaterial({
+                    color: plat.color,
+                    emissive: plat.color,
+                    emissiveIntensity: 0.4,
+                    flatShading: true
+                });
+                const platform = new THREE.Mesh(platGeometry, platMaterial);
+                platform.position.set(plat.x, plat.y, plat.z);
+                pixelWorld.add(platform);
+                
+                // Bordures
+                const edges = new THREE.EdgesGeometry(platGeometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+                const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                platform.add(wireframe);
+            });
+            
+            // BLOCS MYSTÈRES style Mario (cubes avec point d'interrogation)
+            const mysteryBlocks = [
+                { x: 0, y: 2, z: -40 },
+                { x: -8, y: 4, z: -80 },
+                { x: 10, y: 3, z: -110 },
+                { x: -5, y: 5, z: -140 },
+            ];
+            
+            mysteryBlocks.forEach(pos => {
+                const cubeGeometry = new THREE.BoxGeometry(4, 4, 4);
+                const cubeMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xffff00,
+                    emissive: 0xffaa00,
+                    emissiveIntensity: 0.5,
+                    flatShading: true
+                });
+                const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                cube.position.set(pos.x, pos.y, pos.z);
+                cube.userData.floatOffset = Math.random() * Math.PI * 2;
+                pixelWorld.add(cube);
+                
+                // Point d'interrogation
+                const questionGeometry = new THREE.BoxGeometry(2, 0.5, 0.5);
+                const questionMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                const question = new THREE.Mesh(questionGeometry, questionMaterial);
+                question.position.z = 2.1;
+                cube.add(question);
+                
+                const edges = new THREE.EdgesGeometry(cubeGeometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff6600, linewidth: 2 });
+                const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                cube.add(wireframe);
+            });
+            
+            // MONTAGNES PIXELISÉES en arrière-plan
+            for (let i = 0; i < 8; i++) {
+                const mountainHeight = 15 + Math.random() * 20;
+                const mountainWidth = 20 + Math.random() * 15;
+                
+                // Pyramide pixelisée
+                for (let layer = 0; layer < 5; layer++) {
+                    const layerWidth = mountainWidth * (1 - layer * 0.15);
+                    const layerGeometry = new THREE.BoxGeometry(layerWidth, 5, 8);
+                    const mountainColor = i % 2 === 0 ? 0x330066 : 0x660099;
+                    const layerMaterial = new THREE.MeshPhongMaterial({
+                        color: mountainColor,
+                        emissive: mountainColor,
+                        emissiveIntensity: 0.2,
+                        flatShading: true
+                    });
+                    
+                    const layerMesh = new THREE.Mesh(layerGeometry, layerMaterial);
+                    layerMesh.position.set(
+                        (i % 2 === 0 ? -1 : 1) * (30 + Math.random() * 10),
+                        -10 + layer * 5,
+                        -150 - i * 30
+                    );
+                    pixelWorld.add(layerMesh);
+                    
+                    const edges = new THREE.EdgesGeometry(layerGeometry);
+                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 1 });
+                    const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                    layerMesh.add(wireframe);
+                }
+            }
+            
+            // NUAGES PIXELS style 8-bit
+            for (let i = 0; i < 12; i++) {
+                const cloudGroup = new THREE.Group();
+                
+                // Corps du nuage composé de cubes
+                for (let j = 0; j < 5; j++) {
+                    const cubeSize = 2 + Math.random();
+                    const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+                    const cubeMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.6
+                    });
+                    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                    cube.position.set(j * 2 - 4, Math.random() * 2, 0);
+                    cloudGroup.add(cube);
+                }
+                
+                cloudGroup.position.set(
+                    (Math.random() - 0.5) * 50,
+                    10 + Math.random() * 15,
+                    -50 - i * 30
+                );
+                
+                pixelWorld.add(cloudGroup);
+            }
+            
+            // ARBRES PIXELS style Minecraft
+            const trees = [
+                { x: -20, z: -50 },
+                { x: 22, z: -70 },
+                { x: -18, z: -100 },
+                { x: 20, z: -130 },
+            ];
+            
+            trees.forEach(pos => {
+                // Tronc
+                const trunkGeometry = new THREE.BoxGeometry(2, 4, 2);
+                const trunkMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x8B4513,
+                    flatShading: true
+                });
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.set(pos.x, -8, pos.z);
+                pixelWorld.add(trunk);
+                
+                // Feuillage (pyramide de cubes)
+                for (let i = 0; i < 3; i++) {
+                    const size = 6 - i * 1.5;
+                    const foliageGeometry = new THREE.BoxGeometry(size, 2, size);
+                    const foliageMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x00ff00,
+                        emissive: 0x00ff00,
+                        emissiveIntensity: 0.3,
+                        flatShading: true
+                    });
+                    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                    foliage.position.set(pos.x, -4 + i * 2, pos.z);
+                    pixelWorld.add(foliage);
+                    
+                    const edges = new THREE.EdgesGeometry(foliageGeometry);
+                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff });
+                    const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                    foliage.add(wireframe);
+                }
+            });
+            
+            // ÉTOILES PIXEL dans le ciel
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 1000;
+            const positions = new Float32Array(starCount * 3);
+            
+            for (let i = 0; i < starCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 200;
+                positions[i + 1] = 20 + Math.random() * 80;
+                positions[i + 2] = (Math.random() - 0.5) * 400;
+            }
+            
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 3,
+                transparent: true,
+                opacity: 0.8,
+                map: createStarTexture()
+            });
+            
+            starField = new THREE.Points(starGeometry, starMaterial);
+            pixelWorld.add(starField);
+            
+            scene.add(pixelWorld);
+            
+            // Décaler le monde pixel de +12 unités pour correspondre au nouveau système Y=0
+            pixelWorld.position.y = 12;
+        }
+        
+        function createStarTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            
+            // Étoile pixelisée
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(7, 6, 2, 4);
+            ctx.fillRect(6, 7, 4, 2);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+        
+        function createSkillHolograms() {
+            skills.forEach((skill, index) => {
+                const group = new THREE.Group();
+                
+                // Panneau holographique principal
+                const panelGeometry = new THREE.PlaneGeometry(12, 8);
+                const panelMaterial = new THREE.MeshBasicMaterial({
+                    color: index % 2 === 0 ? 0xff00ff : 0x00ffff,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+                group.add(panel);
+                
+                // Bordure néon
+                const borderGeometry = new THREE.EdgesGeometry(panelGeometry);
+                const borderMaterial = new THREE.LineBasicMaterial({
+                    color: index % 2 === 0 ? 0xff00ff : 0x00ffff,
+                    linewidth: 3
+                });
+                const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+                group.add(border);
+                
+                // Particules autour
+                const particleCount = 50;
+                const particleGeometry = new THREE.BufferGeometry();
+                const particlePositions = new Float32Array(particleCount * 3);
+                
+                for (let i = 0; i < particleCount * 3; i += 3) {
+                    const angle = (i / 3) * (Math.PI * 2 / particleCount);
+                    const radius = 7 + Math.random() * 2;
+                    particlePositions[i] = Math.cos(angle) * radius;
+                    particlePositions[i + 1] = Math.sin(angle) * radius;
+                    particlePositions[i + 2] = (Math.random() - 0.5) * 2;
+                }
+                
+                particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+                const particleMaterial = new THREE.PointsMaterial({
+                    color: index % 2 === 0 ? 0xff00ff : 0x00ffff,
+                    size: 0.5,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const particles = new THREE.Points(particleGeometry, particleMaterial);
+                group.add(particles);
+                
+                group.position.z = -skill.position;
+                group.userData = { skill, index, particles };
+                skillHolograms.push(group);
+                scene.add(group);
+            });
+        }
+        
+        function createRetroGrid() {
+            // FOND DE MONTAGNES PIXELISÉES avec effet parallaxe
+            backgroundMountains = new THREE.Group();
+            
+            // Plusieurs couches de montagnes pour effet de profondeur
+            const mountainLayers = [
+                { distance: -250, color: 0x1a0033, height: 40, opacity: 0.6 },
+                { distance: -200, color: 0x330066, height: 50, opacity: 0.7 },
+                { distance: -150, color: 0x660099, height: 60, opacity: 0.8 }
+            ];
+            
+            mountainLayers.forEach((layer, layerIndex) => {
+                const layerGroup = new THREE.Group();
+                
+                // Créer plusieurs montagnes pour chaque couche
+                for (let i = 0; i < 15; i++) {
+                    const mountainGroup = new THREE.Group();
+                    const baseWidth = 15 + Math.random() * 20;
+                    const peakHeight = layer.height + Math.random() * 20;
+                    const layers = 6 + Math.floor(Math.random() * 4);
+                    
+                    // Créer une montagne en couches (pyramide pixelisée)
+                    for (let j = 0; j < layers; j++) {
+                        const layerHeight = 4;
+                        const layerWidth = baseWidth * (1 - (j / layers) * 0.9);
+                        const layerDepth = 8 + Math.random() * 4;
+                        
+                        const boxGeometry = new THREE.BoxGeometry(layerWidth, layerHeight, layerDepth);
+                        const boxMaterial = new THREE.MeshBasicMaterial({
+                            color: layer.color,
+                            transparent: true,
+                            opacity: layer.opacity
+                        });
+                        
+                        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+                        box.position.y = -20 + j * layerHeight;
+                        mountainGroup.add(box);
+                        
+                        // Bordures néon
+                        const edges = new THREE.EdgesGeometry(boxGeometry);
+                        const edgeMaterial = new THREE.LineBasicMaterial({
+                            color: layerIndex === 0 ? 0xff00ff : (layerIndex === 1 ? 0x9900ff : 0xcc00ff),
+                            transparent: true,
+                            opacity: layer.opacity * 0.8
+                        });
+                        const wireframe = new THREE.LineSegments(edges, edgeMaterial);
+                        box.add(wireframe);
+                    }
+                    
+                    mountainGroup.position.x = (i - 7) * 30;
+                    mountainGroup.position.z = layer.distance;
+                    mountainGroup.userData = { 
+                        layerIndex,
+                        originalZ: layer.distance,
+                        glitchOffset: Math.random() * Math.PI * 2
+                    };
+                    
+                    layerGroup.add(mountainGroup);
+                }
+                
+                backgroundMountains.add(layerGroup);
+            });
+            
+            scene.add(backgroundMountains);
+            
+            // CIEL VIOLET PIXELISÉ avec effet glitch
+            const skyWidth = 400;
+            const skyHeight = 200;
+            const skySegments = 20;
+            
+            glitchSky = new THREE.Group();
+            
+            for (let i = 0; i < skySegments; i++) {
+                const segmentHeight = skyHeight / skySegments;
+                const planeGeometry = new THREE.PlaneGeometry(skyWidth, segmentHeight);
+                
+                // Dégradé du violet foncé au violet clair
+                const t = i / skySegments;
+                const r = Math.floor(26 + t * 76); // 1a -> 66
+                const g = Math.floor(t * 51); // 00 -> 33
+                const b = Math.floor(51 + t * 102); // 33 -> 99
+                const color = (r << 16) | (g << 8) | b;
+                
+                const planeMaterial = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.9,
+                    side: THREE.DoubleSide
+                });
+                
+                const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                plane.position.y = 10 + (i - skySegments / 2) * segmentHeight;
+                plane.position.z = -300;
+                
+                plane.userData = {
+                    segmentIndex: i,
+                    originalY: plane.position.y,
+                    glitchPhase: Math.random() * Math.PI * 2
+                };
+                
+                glitchSky.add(plane);
+            }
+            
+            scene.add(glitchSky);
+            
+            // SOLEIL/LUNE pixel style vaporwave
+            const sunGeometry = new THREE.CircleGeometry(12, 20);
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff00ff,
+                emissive: 0xff00ff,
+                emissiveIntensity: 1
+            });
+            const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            sun.position.set(0, 35, -280);
+            scene.add(sun);
+            
+            // Anneaux autour du soleil
+            for (let i = 1; i < 5; i++) {
+                const ringGeometry = new THREE.RingGeometry(12 + i * 3, 12 + i * 3 + 0.8, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: i % 2 === 0 ? 0xff00ff : 0x00ffff,
+                    transparent: true,
+                    opacity: 0.7 - i * 0.1,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.position.copy(sun.position);
+                scene.add(ring);
+            }
+        }
+        
+        // FORÊT ENCHANTÉE (côté gauche) avec coffres
+        // FORÊT ENCHANTÉE - THÈME CODE/CYBER - Design cohérent
+        function createEnchantedForest() {
+            enchantedForest = new THREE.Group();
+            
+            // === SOL CYBER GRID ===
+            const groundGeometry = new THREE.PlaneGeometry(70, 280);
+            const groundMaterial = new THREE.MeshPhongMaterial({
+                color: 0x003311,
+                emissive: 0x00ff44,
+                emissiveIntensity: 0.2,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.set(-40, 0, -80);
+            enchantedForest.add(ground);
+            
+            // Collider invisible
+            const colliderGeometry = new THREE.BoxGeometry(70, 5, 280);
+            const colliderMaterial = new THREE.MeshBasicMaterial({ 
+                visible: false,
+                transparent: true,
+                opacity: 0
+            });
+            const collider = new THREE.Mesh(colliderGeometry, colliderMaterial);
+            collider.position.set(-40, -2.5, -80);
+            enchantedForest.add(collider);
+            
+            // Grille TRON style
+            const gridHelper = new THREE.GridHelper(70, 35, 0x00ffff, 0x00ff44);
+            gridHelper.position.set(-40, 0.05, -80);
+            enchantedForest.add(gridHelper);
+            
+            const forestPositions = [
+                { x: -40, z: -10 },
+                { x: -45, z: -40 },
+                { x: -38, z: -70 },
+                { x: -42, z: -100 },
+                { x: -39, z: -130 },
+                { x: -44, z: -160 },
+                { x: -37, z: -190 }
+            ];
+            
+            forestPositions.forEach((pos, index) => {
+                // === ARBRES "CODE" (Pyramides de données) ===
+                for (let i = 0; i < 8; i++) {
+                    const treeGroup = new THREE.Group();
+                    const offsetX = (Math.random() - 0.5) * 28;
+                    const offsetZ = (Math.random() - 0.5) * 32;
+                    
+                    // Tronc cubique : 1x6x1
+                    const trunkGeo = new THREE.BoxGeometry(1, 6, 1);
+                    const trunkMat = new THREE.MeshPhongMaterial({
+                        color: 0x00aa00,
+                        emissive: 0x00ff00,
+                        emissiveIntensity: 0.3,
+                        flatShading: true
+                    });
+                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                    trunk.position.y = 3;
+                    treeGroup.add(trunk);
+                    
+                    // Feuillage en "stack" de données (3 cubes décroissants)
+                    const sizes = [4, 3, 2];
+                    sizes.forEach((size, j) => {
+                        const leafGeo = new THREE.BoxGeometry(size, 1.5, size);
+                        const leafMat = new THREE.MeshPhongMaterial({
+                            color: 0x00ff88,
+                            emissive: 0x00ffff,
+                            emissiveIntensity: 0.4,
+                            flatShading: true
+                        });
+                        const leaf = new THREE.Mesh(leafGeo, leafMat);
+                        leaf.position.y = 6.5 + j * 1.5;
+                        treeGroup.add(leaf);
+                        
+                        // Bordures néon
+                        const edges = new THREE.EdgesGeometry(leafGeo);
+                        const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
+                        const wireframe = new THREE.LineSegments(edges, edgeMat);
+                        leaf.add(wireframe);
+                    });
+                    
+                    treeGroup.position.set(pos.x + offsetX, 0, pos.z + offsetZ);
+                    enchantedForest.add(treeGroup);
+                    addCollider(pos.x + offsetX, 3, pos.z + offsetZ, 1.5, 6, 1.5, 'Arbre');
+                }
+                
+                // === MUSHROOMS "POWER-UPS" (Style Mario/Retro) ===
+                for (let i = 0; i < 6; i++) {
+                    const mushGroup = new THREE.Group();
+                    
+                    // Tige : 0.25x0.8x0.25
+                    const stemGeo = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+                    const stemMat = new THREE.MeshPhongMaterial({
+                        color: 0xffffff,
+                        flatShading: true
+                    });
+                    const stem = new THREE.Mesh(stemGeo, stemMat);
+                    stem.position.y = 0.4;
+                    mushGroup.add(stem);
+                    
+                    // Chapeau : 1x0.5x1
+                    const capGeo = new THREE.BoxGeometry(1, 0.5, 1);
+                    const colors = [0xff00ff, 0x00ffff, 0xffff00];
+                    const capMat = new THREE.MeshPhongMaterial({
+                        color: colors[i % 3],
+                        emissive: colors[i % 3],
+                        emissiveIntensity: 0.5,
+                        flatShading: true
+                    });
+                    const cap = new THREE.Mesh(capGeo, capMat);
+                    cap.position.y = 1.05;
+                    mushGroup.add(cap);
+                    
+                    // Pois (3 petits cubes blancs)
+                    for (let d = 0; d < 3; d++) {
+                        const dotGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+                        const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                        const dot = new THREE.Mesh(dotGeo, dotMat);
+                        dot.position.set(
+                            (Math.random() - 0.5) * 0.6,
+                            1.3,
+                            (Math.random() - 0.5) * 0.6
+                        );
+                        mushGroup.add(dot);
+                    }
+                    
+                    mushGroup.position.set(
+                        pos.x + (Math.random() - 0.5) * 24,
+                        0,
+                        pos.z + (Math.random() - 0.5) * 28
+                    );
+                    enchantedForest.add(mushGroup);
+                }
+                
+                // === CRISTAUX "DATA NODES" ===
+                for (let i = 0; i < 4; i++) {
+                    const crystalGroup = new THREE.Group();
+                    
+                    // Cristal octaédrique : taille 0.8
+                    const crystalGeo = new THREE.OctahedronGeometry(0.8, 0);
+                    const crystalMat = new THREE.MeshPhongMaterial({
+                        color: 0x00ffff,
+                        emissive: 0x00ffff,
+                        emissiveIntensity: 0.8,
+                        flatShading: true,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+                    crystal.position.y = 1.5 + Math.random() * 0.5;
+                    crystalGroup.add(crystal);
+                    
+                    // Anneau orbital
+                    const ringGeo = new THREE.TorusGeometry(1.2, 0.08, 4, 8);
+                    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI / 2;
+                    ring.position.y = 1.7;
+                    crystalGroup.add(ring);
+                    
+                    crystalGroup.position.set(
+                        pos.x + (Math.random() - 0.5) * 20,
+                        0,
+                        pos.z + (Math.random() - 0.5) * 24
+                    );
+                    crystalGroup.userData.floatOffset = Math.random() * Math.PI * 2;
+                    enchantedForest.add(crystalGroup);
+                }
+                
+                // === FLEURS "PIXELS" (Très petites) ===
+                for (let i = 0; i < 15; i++) {
+                    const flowerGroup = new THREE.Group();
+                    
+                    // Tige : 0.08x0.4x0.08
+                    const stemGeo = new THREE.BoxGeometry(0.08, 0.4, 0.08);
+                    const stemMat = new THREE.MeshPhongMaterial({
+                        color: 0x00aa00,
+                        flatShading: true
+                    });
+                    const stem = new THREE.Mesh(stemGeo, stemMat);
+                    stem.position.y = 0.2;
+                    flowerGroup.add(stem);
+                    
+                    // Fleur : 0.3x0.08x0.3 (croix de pixels)
+                    const petalGeo1 = new THREE.BoxGeometry(0.3, 0.08, 0.08);
+                    const petalGeo2 = new THREE.BoxGeometry(0.08, 0.08, 0.3);
+                    const petalMat = new THREE.MeshBasicMaterial({
+                        color: i % 2 === 0 ? 0xffff00 : 0xff00ff
+                    });
+                    const petal1 = new THREE.Mesh(petalGeo1, petalMat);
+                    const petal2 = new THREE.Mesh(petalGeo2, petalMat);
+                    petal1.position.y = 0.45;
+                    petal2.position.y = 0.45;
+                    flowerGroup.add(petal1);
+                    flowerGroup.add(petal2);
+                    
+                    flowerGroup.position.set(
+                        pos.x + (Math.random() - 0.5) * 26,
+                        0,
+                        pos.z + (Math.random() - 0.5) * 30
+                    );
+                    enchantedForest.add(flowerGroup);
+                }
+
+                
+                // === ROCHERS "BYTES" (Cubes empilés) ===
+                for (let i = 0; i < 5; i++) {
+                    const rockGroup = new THREE.Group();
+                    const numCubes = 2 + Math.floor(Math.random() * 3);
+                    
+                    for (let r = 0; r < numCubes; r++) {
+                        const size = 0.6 + Math.random() * 0.4;
+                        const rockGeo = new THREE.BoxGeometry(size, size, size);
+                        const rockMat = new THREE.MeshPhongMaterial({
+                            color: 0x00aa88,
+                            emissive: 0x00ffff,
+                            emissiveIntensity: 0.2,
+                            flatShading: true
+                        });
+                        const rock = new THREE.Mesh(rockGeo, rockMat);
+                        rock.position.y = r * size * 0.9 + size / 2;
+                        rock.rotation.y = Math.random() * Math.PI;
+                        rockGroup.add(rock);
+                    }
+                    
+                    rockGroup.position.set(
+                        pos.x + (Math.random() - 0.5) * 22,
+                        0,
+                        pos.z + (Math.random() - 0.5) * 26
+                    );
+                    enchantedForest.add(rockGroup);
+                }
+                
+                // === COFFRE "LOOT BOX" (Style rétro gaming) ===
+                const chestGroup = new THREE.Group();
+                
+                // Base : 2.5x1.2x2
+                const baseGeo = new THREE.BoxGeometry(2.5, 1.2, 2);
+                const chestMat = new THREE.MeshPhongMaterial({
+                    color: 0x8B6914,
+                    emissive: 0xffaa00,
+                    emissiveIntensity: 0.4,
+                    flatShading: true
+                });
+                const base = new THREE.Mesh(baseGeo, chestMat);
+                base.position.y = 0.6;
+                chestGroup.add(base);
+                
+                // Couvercle : 2.5x0.8x2
+                const lidGeo = new THREE.BoxGeometry(2.5, 0.8, 2);
+                const lid = new THREE.Mesh(lidGeo, chestMat);
+                lid.position.y = 1.6;
+                chestGroup.add(lid);
+                
+                // Serrure dorée : 0.5x0.6x0.3
+                const lockGeo = new THREE.BoxGeometry(0.5, 0.6, 0.3);
+                const lockMat = new THREE.MeshPhongMaterial({
+                    color: 0xffff00,
+                    emissive: 0xffff00,
+                    emissiveIntensity: 0.9,
+                    flatShading: true
+                });
+                const lock = new THREE.Mesh(lockGeo, lockMat);
+                lock.position.set(0, 0.6, 1.05);
+                chestGroup.add(lock);
+                
+                // Bordures néon
+                const edges = new THREE.EdgesGeometry(baseGeo);
+                const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
+                const wireframe = new THREE.LineSegments(edges, edgeMat);
+                base.add(wireframe);
+                
+                chestGroup.position.set(pos.x, 0, pos.z);
+                chestGroup.userData = {
+                    opened: false,
+                    lid: lid,
+                    xpReward: 25 + index * 15
+                };
+                
+                addCollider(pos.x, 1, pos.z, 3, 2, 2.5, 'Coffre');
+                
+                chests.push(chestGroup);
+                enchantedForest.add(chestGroup);
+            });
+            
+            // === LUCIOLES "PIXELS" (Particules flottantes) ===
+            window.fireflies = [];
+            for (let i = 0; i < 60; i++) {
+                const fireflyGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+                const fireflyMat = new THREE.MeshBasicMaterial({
+                    color: i % 3 === 0 ? 0xffff00 : i % 3 === 1 ? 0x00ffff : 0x00ff00,
+                    transparent: true,
+                    opacity: 0.95
+                });
+                const firefly = new THREE.Mesh(fireflyGeo, fireflyMat);
+                firefly.position.set(
+                    -40 + (Math.random() - 0.5) * 55,
+                    0.5 + Math.random() * 5,
+                    -80 + (Math.random() - 0.5) * 250
+                );
+                firefly.userData = {
+                    speedX: (Math.random() - 0.5) * 0.025,
+                    speedY: (Math.random() - 0.5) * 0.02,
+                    speedZ: (Math.random() - 0.5) * 0.025,
+                    pulseOffset: Math.random() * Math.PI * 2,
+                    pulseSpeed: 0.06 + Math.random() * 0.04
+                };
+                enchantedForest.add(firefly);
+                window.fireflies.push(firefly);
+            }
+            
+            scene.add(enchantedForest);
+            enchantedForest.position.y = 0;
+        }
+        
+        // FORÊT SOMBRE (côté droit) avec monstres
+        function createDarkForest() {
+            darkForest = new THREE.Group();
+            
+            // SOL de la forêt sombre (terre sombre et lave) - AGRANDI
+            const groundGeometry = new THREE.PlaneGeometry(70, 280);
+            const groundMaterial = new THREE.MeshPhongMaterial({
+                color: 0x330000,
+                emissive: 0x660000,
+                emissiveIntensity: 0.2,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.set(40, 0, -80);
+            darkForest.add(ground);
+            
+            // Collider invisible sous le sol pour empêcher de passer à travers
+            const colliderGeometry = new THREE.BoxGeometry(70, 5, 280);
+            const colliderMaterial = new THREE.MeshBasicMaterial({ 
+                visible: false,
+                transparent: true,
+                opacity: 0
+            });
+            const collider = new THREE.Mesh(colliderGeometry, colliderMaterial);
+            collider.position.set(40, -2.5, -80); // Sous le sol
+            darkForest.add(collider);
+            
+            // Fissures de lave sur le sol - PLUS NOMBREUSES avec animation
+            for (let i = 0; i < 30; i++) {
+                const crackGeometry = new THREE.PlaneGeometry(2 + Math.random() * 4, 0.6);
+                const crackMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff0000,
+                    emissive: 0xff0000,
+                    emissiveIntensity: 0.9,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const crack = new THREE.Mesh(crackGeometry, crackMaterial);
+                crack.rotation.x = -Math.PI / 2;
+                crack.rotation.z = Math.random() * Math.PI;
+                crack.position.set(
+                    40 + (Math.random() - 0.5) * 65,
+                    -11.7,
+                    -80 + (Math.random() - 0.5) * 270
+                );
+                crack.userData.pulseOffset = Math.random() * Math.PI * 2;
+                darkForest.add(crack);
+            }
+            
+            const forestPositions = [
+                { x: 40, z: -10 },
+                { x: 45, z: -40 },
+                { x: 38, z: -70 },
+                { x: 42, z: -100 },
+                { x: 39, z: -130 },
+                { x: 44, z: -160 },
+                { x: 37, z: -190 }
+            ];
+            
+            forestPositions.forEach((pos, index) => {
+                // Arbres morts et tordus (plus nombreux) - 14 au lieu de 10
+                for (let i = 0; i < 14; i++) {
+                    const treeGroup = new THREE.Group();
+                    const offsetX = (Math.random() - 0.5) * 35;
+                    const offsetZ = (Math.random() - 0.5) * 40;
+                    
+                    // Tronc tordu
+                    const trunkGeometry = new THREE.BoxGeometry(2, 5, 2);
+                    const trunkMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x2d1f1f,
+                        emissive: 0x660000,
+                        emissiveIntensity: 0.2,
+                        flatShading: true
+                    });
+                    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                    trunk.position.y = 2.5;
+                    trunk.rotation.z = (Math.random() - 0.5) * 0.4;
+                    treeGroup.add(trunk);
+                    
+                    // Branches tordues avec piques
+                    for (let j = 0; j < 4; j++) {
+                        const branchGeometry = new THREE.BoxGeometry(4, 0.8, 0.8);
+                        const branch = new THREE.Mesh(branchGeometry, trunkMaterial);
+                        branch.position.set(
+                            (Math.random() - 0.5) * 2,
+                            2 + j * 1.5,
+                            0
+                        );
+                        branch.rotation.z = (Math.random() - 0.5) * Math.PI / 2;
+                        treeGroup.add(branch);
+                        
+                        // Piques au bout des branches
+                        const spikeGeometry = new THREE.BoxGeometry(0.3, 1.5, 0.3);
+                        const spikeMaterial = new THREE.MeshPhongMaterial({
+                            color: 0x660000,
+                            emissive: 0xff0000,
+                            emissiveIntensity: 0.5,
+                            flatShading: true
+                        });
+                        const spike = new THREE.Mesh(spikeGeometry, spikeMaterial);
+                        spike.position.set(
+                            branch.position.x + 2,
+                            branch.position.y + 0.8,
+                            0
+                        );
+                        spike.rotation.z = Math.PI / 4;
+                        treeGroup.add(spike);
+                    }
+                    
+                    // Feuillage sombre avec yeux rouges
+                    const foliageGeometry = new THREE.BoxGeometry(5, 3, 5);
+                    const foliageMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x1a0033,
+                        emissive: 0xff0000,
+                        emissiveIntensity: 0.3,
+                        flatShading: true,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                    foliage.position.y = 6; // Au-dessus du tronc (5 + 1)
+                    treeGroup.add(foliage);
+                    
+                    treeGroup.position.set(pos.x + offsetX, 0, pos.z + offsetZ);
+                    darkForest.add(treeGroup);
+                    
+                    // Ajouter collider pour cet arbre
+                    addCollider(pos.x + offsetX, 2.5, pos.z + offsetZ, 2.5, 5, 2.5, 'Arbre Mort');
+                }
+                
+                // Ossements et crânes
+                for (let i = 0; i < 4; i++) {
+                    const skullGeometry = new THREE.SphereGeometry(0.8, 8, 8);
+                    const skullMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xcccccc,
+                        flatShading: true
+                    });
+                    const skull = new THREE.Mesh(skullGeometry, skullMaterial);
+                    skull.position.set(
+                        pos.x + (Math.random() - 0.5) * 20,
+                        -11,
+                        pos.z + (Math.random() - 0.5) * 25
+                    );
+                    
+                    // Yeux du crâne
+                    const eyeGeometry = new THREE.BoxGeometry(0.2, 0.3, 0.2);
+                    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                    leftEye.position.set(-0.3, 0.2, 0.7);
+                    skull.add(leftEye);
+                    
+                    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                    rightEye.position.set(0.3, 0.2, 0.7);
+                    skull.add(rightEye);
+                    
+                    darkForest.add(skull);
+                }
+                
+                // Pierres tombales
+                for (let i = 0; i < 3; i++) {
+                    const tombGeometry = new THREE.BoxGeometry(1.5, 3, 0.5);
+                    const tombMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x4a4a4a,
+                        flatShading: true
+                    });
+                    const tomb = new THREE.Mesh(tombGeometry, tombMaterial);
+                    tomb.position.set(
+                        pos.x + (Math.random() - 0.5) * 20,
+                        -10,
+                        pos.z + (Math.random() - 0.5) * 25
+                    );
+                    tomb.rotation.z = (Math.random() - 0.5) * 0.2;
+                    
+                    const edges = new THREE.EdgesGeometry(tombGeometry);
+                    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
+                    const wireframe = new THREE.LineSegments(edges, edgeMaterial);
+                    tomb.add(wireframe);
+                    
+                    darkForest.add(tomb);
+                }
+                
+                // Brouillard toxique (sphères semi-transparentes)
+                for (let i = 0; i < 5; i++) {
+                    const fogGeometry = new THREE.BoxGeometry(3, 3, 3);
+                    const fogMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x660066,
+                        transparent: true,
+                        opacity: 0.25
+                    });
+                    const fog = new THREE.Mesh(fogGeometry, fogMaterial);
+                    fog.position.set(
+                        pos.x + (Math.random() - 0.5) * 25,
+                        1 + Math.random() * 2,
+                        pos.z + (Math.random() - 0.5) * 30
+                    );
+                    fog.userData.floatOffset = Math.random() * Math.PI * 2;
+                    darkForest.add(fog);
+                }
+                
+                // NOUVEAU : Totems maudits
+                if (index % 2 === 0) {
+                    const totemGroup = new THREE.Group();
+                    
+                    // Base du totem
+                    for (let t = 0; t < 4; t++) {
+                        const segmentGeometry = new THREE.BoxGeometry(1.5, 1.8, 1.5);
+                        const segmentMaterial = new THREE.MeshPhongMaterial({
+                            color: 0x2a1a1a,
+                            emissive: 0xff0000,
+                            emissiveIntensity: 0.2 + t * 0.1,
+                            flatShading: true
+                        });
+                        const segment = new THREE.Mesh(segmentGeometry, segmentMaterial);
+                        segment.position.y = t * 1.8 + 0.9;
+                        totemGroup.add(segment);
+                        
+                        // Yeux rouges sur chaque segment
+                        const eyeGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.1);
+                        const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                        const eye1 = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                        eye1.position.set(-0.4, t * 1.8 + 1.2, 0.8);
+                        totemGroup.add(eye1);
+                        const eye2 = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                        eye2.position.set(0.4, t * 1.8 + 1.2, 0.8);
+                        totemGroup.add(eye2);
+                    }
+                    
+                    totemGroup.position.set(pos.x + 10, 0, pos.z);
+                    darkForest.add(totemGroup);
+                }
+                
+                // NOUVEAU : Feux de camp maudits
+                for (let i = 0; i < 2; i++) {
+                    const fireGroup = new THREE.Group();
+                    
+                    // Bûches en croix
+                    const logGeometry = new THREE.BoxGeometry(2, 0.4, 0.4);
+                    const logMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x3a2a1a,
+                        flatShading: true
+                    });
+                    const log1 = new THREE.Mesh(logGeometry, logMaterial);
+                    log1.position.y = 0.2;
+                    fireGroup.add(log1);
+                    const log2 = new THREE.Mesh(logGeometry, logMaterial);
+                    log2.position.y = 0.2;
+                    log2.rotation.y = Math.PI / 2;
+                    fireGroup.add(log2);
+                    
+                    // Flammes pixelisées (plusieurs cubes)
+                    for (let f = 0; f < 5; f++) {
+                        const flameGeometry = new THREE.BoxGeometry(0.6, 1.2, 0.6);
+                        const flameMaterial = new THREE.MeshBasicMaterial({
+                            color: f % 2 === 0 ? 0xff0000 : 0xff8800,
+                            transparent: true,
+                            opacity: 0.8
+                        });
+                        const flame = new THREE.Mesh(flameGeometry, flameMaterial);
+                        flame.position.set(
+                            (Math.random() - 0.5) * 0.8,
+                            0.8 + f * 0.3,
+                            (Math.random() - 0.5) * 0.8
+                        );
+                        flame.userData.flickerOffset = Math.random() * Math.PI * 2;
+                        fireGroup.add(flame);
+                    }
+                    
+                    // Lumière du feu
+                    const fireLight = new THREE.PointLight(0xff4400, 0.8, 8);
+                    fireLight.position.y = 1.5;
+                    fireGroup.add(fireLight);
+                    
+                    fireGroup.position.set(
+                        pos.x + (Math.random() - 0.5) * 20,
+                        0,
+                        pos.z + (Math.random() - 0.5) * 25
+                    );
+                    darkForest.add(fireGroup);
+                }
+                
+                // NOUVEAU : Cages suspendues
+                if (index % 3 === 1) {
+                    const cageGroup = new THREE.Group();
+                    
+                    // Chaîne
+                    const chainGeometry = new THREE.BoxGeometry(0.15, 5, 0.15);
+                    const chainMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x333333,
+                        flatShading: true
+                    });
+                    const chain = new THREE.Mesh(chainGeometry, chainMaterial);
+                    chain.position.y = 6;
+                    cageGroup.add(chain);
+                    
+                    // Cage (barreaux)
+                    const barMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x444444,
+                        flatShading: true
+                    });
+                    // Barreaux verticaux
+                    for (let b = 0; b < 8; b++) {
+                        const angle = (b / 8) * Math.PI * 2;
+                        const barGeometry = new THREE.BoxGeometry(0.1, 2.5, 0.1);
+                        const bar = new THREE.Mesh(barGeometry, barMaterial);
+                        bar.position.set(
+                            Math.cos(angle) * 1,
+                            3,
+                            Math.sin(angle) * 1
+                        );
+                        cageGroup.add(bar);
+                    }
+                    // Barreaux horizontaux
+                    for (let h = 0; h < 2; h++) {
+                        const ringGeometry = new THREE.TorusGeometry(1, 0.08, 4, 8);
+                        const ring = new THREE.Mesh(ringGeometry, barMaterial);
+                        ring.rotation.x = Math.PI / 2;
+                        ring.position.y = 2.5 + h * 1.5;
+                        cageGroup.add(ring);
+                    }
+                    
+                    // Crâne dans la cage
+                    const skullGeometry = new THREE.SphereGeometry(0.5, 6, 6);
+                    const skullMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xaaaaaa,
+                        flatShading: true
+                    });
+                    const skull = new THREE.Mesh(skullGeometry, skullMaterial);
+                    skull.position.y = 3;
+                    cageGroup.add(skull);
+                    
+                    cageGroup.position.set(
+                        pos.x + (Math.random() - 0.5) * 15,
+                        0,
+                        pos.z
+                    );
+                    cageGroup.userData.swingOffset = Math.random() * Math.PI * 2;
+                    darkForest.add(cageGroup);
+                }
+            });
+            
+            // SOL de la forêt sombre (barrière invisible mais visuelle)
+            const darkFloorGeometry = new THREE.PlaneGeometry(60, 400);
+            const darkFloorMaterial = new THREE.MeshPhongMaterial({
+                color: 0x1a0a0a,
+                emissive: 0x660000,
+                emissiveIntensity: 0.1,
+                side: THREE.DoubleSide
+            });
+            const darkFloor = new THREE.Mesh(darkFloorGeometry, darkFloorMaterial);
+            darkFloor.rotation.x = -Math.PI / 2;
+            darkFloor.position.set(40, -12, -80);
+            darkForest.add(darkFloor);
+            
+            scene.add(darkForest);
+            
+            // Décaler toute la forêt de +12 unités pour correspondre au nouveau système Y=0
+            darkForest.position.y = 0; // Au niveau du sol
+            
+            // SPAWN INITIAL de monstres dans la forêt sombre
+            const initialMonsterPositions = [
+                { x: 40, z: -20 },
+                { x: 38, z: -50 },
+                { x: 45, z: -80 },
+                { x: 42, z: -110 },
+                { x: 39, z: -140 },
+                { x: 44, z: -170 }
+            ];
+            
+            initialMonsterPositions.forEach(pos => {
+                spawnMonster(pos.x + (Math.random() - 0.5) * 10, pos.z + (Math.random() - 0.5) * 15);
+            });
+        }
+        
+        // Fonction pour spawn un monstre
+        function spawnMonster(x, z) {
+            const monsterGroup = new THREE.Group();
+            
+            // Corps du monstre
+            const bodyGeometry = new THREE.BoxGeometry(3, 3, 3);
+            const bodyMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff0000,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.5,
+                flatShading: true
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 1.5; // Au niveau du sol
+            monsterGroup.add(body);
+            
+            // Yeux
+            const eyeGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.3);
+            const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(-0.8, 2, 1.6); // Au niveau de la tête
+            monsterGroup.add(leftEye);
+            
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(0.8, 2, 1.6); // Au niveau de la tête
+            monsterGroup.add(rightEye);
+            
+            // Cornes
+            for (let i = 0; i < 2; i++) {
+                const hornGeometry = new THREE.ConeGeometry(0.4, 1.5, 4);
+                const hornMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x000000,
+                    flatShading: true
+                });
+                const horn = new THREE.Mesh(hornGeometry, hornMaterial);
+                horn.position.set(i === 0 ? -1 : 1, -8, 0);
+                monsterGroup.add(horn);
+            }
+            
+            // Bordures
+            const edges = new THREE.EdgesGeometry(bodyGeometry);
+            const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+            const wireframe = new THREE.LineSegments(edges, edgeMaterial);
+            body.add(wireframe);
+            
+            monsterGroup.position.set(x, 0, z);
+            monsterGroup.userData = {
+                health: 3,
+                maxHealth: 3,
+                xpReward: 15,
+                hitCooldown: 0,
+                movePattern: Math.random() * Math.PI * 2
+            };
+            
+            monsters.push(monsterGroup);
+            scene.add(monsterGroup);
+            
+            return monsterGroup;
+        }
+        
+        function updateStarField() {
+            // Animation des blocs mystères (flottement)
+            pixelWorld.children.forEach(child => {
+                if (child.userData.floatOffset !== undefined) {
+                    child.position.y += Math.sin(Date.now() * 0.003 + child.userData.floatOffset) * 0.02;
+                }
+            });
+            
+            // === ANIMATION DES LUCIOLES ===
+            if (window.fireflies) {
+                window.fireflies.forEach(firefly => {
+                    const data = firefly.userData;
+                    const time = Date.now() * 0.001;
+                    
+                    // Mouvement erratique
+                    firefly.position.x += data.speedX;
+                    firefly.position.y += data.speedY;
+                    firefly.position.z += data.speedZ;
+                    
+                    // Pulsation lumineuse
+                    const pulse = (Math.sin(time * data.pulseSpeed + data.pulseOffset) + 1) / 2;
+                    firefly.material.opacity = 0.3 + pulse * 0.7;
+                    
+                    // Limites de la forêt enchantée
+                    if (firefly.position.x < -67 || firefly.position.x > -13) data.speedX *= -1;
+                    if (firefly.position.y < 0.3 || firefly.position.y > 6) data.speedY *= -1;
+                    if (firefly.position.z < -200 || firefly.position.z > 40) data.speedZ *= -1;
+                });
+            }
+            
+            // EFFET PARALLAXE sur les montagnes (bouge avec le joueur)
+            backgroundMountains.children.forEach(layerGroup => {
+                layerGroup.children.forEach(mountain => {
+                    const parallaxSpeed = (3 - mountain.userData.layerIndex) * 0.15;
+                    mountain.position.z = mountain.userData.originalZ + cameraPosition * parallaxSpeed;
+                    
+                    // Effet glitch aléatoire sur les montagnes
+                    if (Math.random() > 0.98) {
+                        mountain.position.x += (Math.random() - 0.5) * 2;
+                        setTimeout(() => {
+                            mountain.position.x = mountain.position.x;
+                        }, 50);
+                    }
+                });
+            });
+            
+            // EFFET GLITCH sur le ciel (s'anime avec le mouvement)
+            const glitchIntensity = Math.abs(cameraSpeed) * 5;
+            glitchSky.children.forEach(segment => {
+                const time = Date.now() * 0.001;
+                const phase = segment.userData.glitchPhase;
+                
+                // Glitch horizontal qui suit le mouvement
+                const glitchX = Math.sin(time * 2 + phase) * glitchIntensity * 0.5;
+                segment.position.x = glitchX + cameraPosition * 0.05;
+                
+                // Glitch vertical aléatoire
+                if (Math.abs(cameraSpeed) > 0.5 && Math.random() > 0.95) {
+                    segment.position.y = segment.userData.originalY + (Math.random() - 0.5) * 8;
+                    segment.material.opacity = 0.6 + Math.random() * 0.3;
+                    
+                    setTimeout(() => {
+                        segment.position.y = segment.userData.originalY;
+                        segment.material.opacity = 0.9;
+                    }, 100);
+                }
+                
+                // Effet de distorsion des couleurs lors du mouvement rapide
+                if (Math.abs(cameraSpeed) > 0.8) {
+                    const colorShift = Math.sin(time * 10 + segment.userData.segmentIndex) * 0.2;
+                    const currentColor = segment.material.color.getHex();
+                    const r = ((currentColor >> 16) & 0xff) / 255;
+                    const g = ((currentColor >> 8) & 0xff) / 255;
+                    const b = (currentColor & 0xff) / 255;
+                    
+                    segment.material.color.setRGB(
+                        Math.min(1, r + colorShift * 0.3),
+                        g,
+                        Math.min(1, b + colorShift * 0.5)
+                    );
+                }
+            });
+        }
+        
+        function checkSkillProximity() {
+            let nearestSkill = null;
+            let nearestDistance = Infinity;
+            
+            skillHolograms.forEach((hologram, index) => {
+                const distance = Math.abs(hologram.position.z - camera.position.z);
+                
+                if (distance < 8 && distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestSkill = hologram;
+                }
+            });
+            
+            if (nearestSkill && nearestDistance < 6) {
+                if (currentSkillIndex !== nearestSkill.userData.index) {
+                    showSkill(nearestSkill.userData.skill);
+                    currentSkillIndex = nearestSkill.userData.index;
+                }
+            } else {
+                hideSkill();
+                currentSkillIndex = -1;
+            }
+        }
+        
+        function showSkill(skill) {
+            const display = document.getElementById('skill-display');
+            document.getElementById('skill-title').textContent = skill.title;
+            document.getElementById('skill-desc').innerHTML = `
+                <strong style="color: #ff00ff;">${skill.subtitle}</strong><br>
+                ${skill.description}<br>
+                <div style="margin-top: 15px; color: #00ffff; font-size: 16px;">
+                    > Appuyez sur [F] pour lancer le mini-jeu ! >
+                </div>
+            `;
+            
+            const featuresList = document.getElementById('skill-features');
+            featuresList.innerHTML = '';
+            skill.features.forEach(feature => {
+                const li = document.createElement('li');
+                li.textContent = feature;
+                featuresList.appendChild(li);
+            });
+            
+            display.classList.add('active');
+        }
+        
+        function hideSkill() {
+            document.getElementById('skill-display').classList.remove('active');
+        }
+        
+        // ===== SYSTÈME D'EXPÉRIENCE ET INTERACTIONS =====
+        
+        function addExperience(amount) {
+            playerExp += amount;
+            
+            // Calcul du niveau
+            const xpNeeded = playerLevel * 100;
+            if (playerExp >= xpNeeded) {
+                playerExp -= xpNeeded;
+                playerLevel++;
+                showFloatingText(`NIVEAU ${playerLevel}!`, camera.position.x, camera.position.y, '#ffff00');
+            }
+            
+            updateXPDisplay();
+            showFloatingText(`+${amount} XP`, camera.position.x, camera.position.y + 2, '#00ffff');
+        }
+        
+        function updateXPDisplay() {
+            const xpNeeded = playerLevel * 100;
+            const xpPercent = (playerExp / xpNeeded) * 100;
+            
+            document.getElementById('level-display').textContent = 
+                `NIVEAU ${playerLevel} - XP: ${playerExp} / ${xpNeeded}`;
+            document.getElementById('xp-fill').style.width = xpPercent + '%';
+        }
+        
+        function showFloatingText(text, x, y, color) {
+            const popup = document.createElement('div');
+            popup.className = 'particle-popup';
+            popup.textContent = text;
+            popup.style.color = color;
+            popup.style.textShadow = `0 0 20px ${color}`;
+            popup.style.left = '50%';
+            popup.style.top = '50%';
+            document.body.appendChild(popup);
+            
+            setTimeout(() => {
+                popup.remove();
+            }, 2000);
+        }
+        
+        function checkInteractions() {
+            const interactDistance = 8;
+            const prompt = document.getElementById('interaction-prompt');
+            
+            nearestChest = null;
+            nearestMonster = null;
+            
+            // Vérifier les coffres
+            chests.forEach(chest => {
+                if (chest.userData.opened) return;
+                
+                const distance = camera.position.distanceTo(chest.position);
+                if (distance < interactDistance) {
+                    nearestChest = chest;
+                    prompt.textContent = 'CHEST Appuyez sur [F] pour ouvrir le coffre';
+                    prompt.classList.add('visible');
+                }
+            });
+            
+            // Vérifier les monstres
+            monsters.forEach(monster => {
+                const distance = camera.position.distanceTo(monster.position);
+                if (distance < interactDistance) {
+                    nearestMonster = monster;
+                    prompt.textContent = `ATTACK Appuyez sur [F] pour attaquer (${monster.userData.health}/${monster.userData.maxHealth} PV)`;
+                    prompt.classList.add('visible');
+                }
+            });
+            
+            // Cacher le prompt si rien à proximité
+            if (!nearestChest && !nearestMonster) {
+                prompt.classList.remove('visible');
+            }
+            
+            // Spawn de monstres dans la forêt sombre
+            if (camera.position.x > 25 && Math.random() > 0.995 && monsters.length < 10) {
+                const spawnZ = camera.position.z + (Math.random() - 0.5) * 40;
+                const spawnX = 35 + (Math.random() - 0.5) * 15;
+                spawnMonster(spawnX, spawnZ);
+            }
+        }
+        
+        function interact() {
+            if (nearestChest && !nearestChest.userData.opened) {
+                // Ouvrir le coffre
+                nearestChest.userData.opened = true;
+                const lid = nearestChest.userData.lid;
+                
+                // Animation d'ouverture
+                lid.rotation.x = -Math.PI / 3;
+                lid.position.y += 1;
+                lid.position.z -= 1;
+                
+                // Donner l'XP
+                addExperience(nearestChest.userData.xpReward);
+                
+                // NOUVEAU : Découverte de compétence aléatoire
+                discoverRandomSkill(nearestChest.position, 'chest');
+                
+                // Particules
+                createWorldParticles(
+                    nearestChest.position.x,
+                    nearestChest.position.y,
+                    nearestChest.position.z,
+                    0xffff00,
+                    30
+                );
+                
+                nearestChest = null;
+            }
+            
+            if (nearestMonster) {
+                // Attaquer le monstre
+                const monster = nearestMonster;
+                
+                if (monster.userData.hitCooldown <= 0) {
+                    monster.userData.health--;
+                    monster.userData.hitCooldown = 30; // frames
+                    
+                    // Flash rouge
+                    monster.children.forEach(child => {
+                        if (child.material) {
+                            child.material.emissiveIntensity = 1;
+                            setTimeout(() => {
+                                if (child.material) child.material.emissiveIntensity = 0.5;
+                            }, 100);
+                        }
+                    });
+                    
+                    if (monster.userData.health <= 0) {
+                        // Monstre vaincu
+                        addExperience(monster.userData.xpReward);
+                        
+                        // NOUVEAU : Découverte de compétence aléatoire
+                        discoverRandomSkill(monster.position, 'monster');
+                        
+                        createWorldParticles(
+                            monster.position.x,
+                            monster.position.y,
+                            monster.position.z,
+                            0xff00ff,
+                            40
+                        );
+                        
+                        scene.remove(monster);
+                        const index = monsters.indexOf(monster);
+                        if (index > -1) monsters.splice(index, 1);
+                        
+                        nearestMonster = null;
+                    }
+                }
+            }
+        }
+        
+        // NOUVELLE FONCTION : Découvrir une compétence aléatoire
+        function discoverRandomSkill(position, source) {
+            // Trouver une compétence non découverte
+            const undiscovered = allDiscoveries.filter(skill => 
+                !discoveredSkills.some(d => d.name === skill.name)
+            );
+            
+            if (undiscovered.length === 0) {
+                // Toutes les compétences découvertes !
+                showSkillNotification({
+                    name: ' TOUTES COMPÉTENCES DÉBLOQUÉES !',
+                    icon: 'SUCCESS',
+                    color: '#ffffff',
+                    description: 'Vous avez découvert tout le portfolio !'
+                }, position);
+                return;
+            }
+            
+            // Choisir une compétence aléatoire
+            const skill = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+            discoveredSkills.push(skill);
+            
+            // Afficher la notification
+            showSkillNotification(skill, position);
+            
+            // Mettre à jour l'UI avec le compteur de compétences
+            updateSkillCounter();
+        }
+        
+        // Afficher une notification de compétence découverte
+        function showSkillNotification(skill, position) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.95);
+                border: 3px solid ${skill.color};
+                padding: 25px 35px;
+                color: #fff;
+                font-family: 'Orbitron', sans-serif;
+                text-align: center;
+                box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.1), 0 0 30px ${skill.color};
+                z-index: 10000;
+                animation: skillPopIn 0.5s ease;
+            `;
+            
+            notification.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 10px;">${skill.icon}</div>
+                <div style="font-size: 20px; color: ${skill.color}; margin-bottom: 8px; letter-spacing: 2px;">
+                    COMPÉTENCE DÉBLOQUÉE !
+                </div>
+                <div style="font-size: 24px; font-weight: bold; margin-bottom: 12px;">
+                    ${skill.name}
+                </div>
+                <div style="font-size: 12px; color: #00ff00; font-family: 'Share Tech Mono', monospace;">
+                    ${skill.description}
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Retirer après 1 seconde
+            setTimeout(() => {
+                notification.style.animation = 'skillPopOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 1000);
+            
+            // Particules spéciales au centre de l'écran
+            createWorldParticles(position.x, position.y + 3, position.z, skill.color.replace('#', '0x'), 50);
+        }
+        
+        // Mettre à jour le compteur de compétences
+        function updateSkillCounter() {
+            let counter = document.getElementById('skill-counter');
+            if (!counter) {
+                counter = document.createElement('div');
+                counter.id = 'skill-counter';
+                counter.style.cssText = `
+                    position: absolute;
+                    top: 65px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.75);
+                    border: 1px solid #ffff00;
+                    padding: 3px 8px;
+                    color: #ffff00;
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 9px;
+                    z-index: 100;
+                    letter-spacing: 0.5px;
+                    box-shadow: inset 0 0 10px rgba(255, 255, 0, 0.1), 0 0 8px rgba(255, 255, 0, 0.2);
+                    cursor: pointer;
+                    opacity: 0.85;
+                `;
+                counter.onclick = toggleSkillsInventory;
+                document.body.appendChild(counter);
+            }
+            counter.innerHTML = `SKILLS: ${discoveredSkills.length}/${allDiscoveries.length} <span style="font-size: 7px;">[I]</span>`;
+        }
+        
+        // Afficher/masquer l'inventaire des compétences
+        function toggleSkillsInventory() {
+            let inventory = document.getElementById('skills-inventory');
+            
+            if (!inventory) {
+                inventory = document.createElement('div');
+                inventory.id = 'skills-inventory';
+                inventory.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 80%;
+                    max-width: 800px;
+                    max-height: 80%;
+                    background: rgba(0, 0, 0, 0.95);
+                    border: 3px solid #00ffff;
+                    padding: 20px;
+                    color: #fff;
+                    font-family: 'Orbitron', sans-serif;
+                    z-index: 10001;
+                    overflow-y: auto;
+                    box-shadow: inset 0 0 40px rgba(0, 255, 255, 0.2), 0 0 30px rgba(0, 255, 255, 0.5);
+                    display: none;
+                `;
+                document.body.appendChild(inventory);
+            }
+            
+            if (inventory.style.display === 'none') {
+                // Afficher l'inventaire
+                inventory.style.display = 'block';
+                
+                // Construire le contenu
+                let html = `
+                    <h2 style="text-align: center; color: #00ffff; margin-bottom: 20px; letter-spacing: 3px;">
+                        📚 COMPÉTENCES DÉCOUVERTES (${discoveredSkills.length}/${allDiscoveries.length})
+                    </h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+                `;
+                
+                // Organiser par catégorie
+                const categories = {
+                    'Langages': skillDiscoveries.languages,
+                    'Technologies': skillDiscoveries.technologies,
+                    'Projets': skillDiscoveries.projects,
+                    'Certifications': skillDiscoveries.certifications
+                };
+                
+                Object.entries(categories).forEach(([categoryName, categorySkills]) => {
+                    categorySkills.forEach(skill => {
+                        const discovered = discoveredSkills.some(d => d.name === skill.name);
+                        html += `
+                            <div style="
+                                background: ${discovered ? `linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1))` : 'rgba(50, 50, 50, 0.3)'};
+                                border: 2px solid ${discovered ? skill.color : '#333'};
+                                padding: 15px;
+                                text-align: center;
+                                ${discovered ? '' : 'filter: grayscale(100%); opacity: 0.4;'}
+                                box-shadow: ${discovered ? `inset 0 0 20px ${skill.color}33` : 'none'};
+                            ">
+                                <div style="font-size: 32px; margin-bottom: 8px;">${discovered ? skill.icon : '❓'}</div>
+                                <div style="font-size: 14px; font-weight: bold; margin-bottom: 6px; color: ${discovered ? skill.color : '#666'};">
+                                    ${discovered ? skill.name : '???'}
+                                </div>
+                                <div style="font-size: 9px; color: ${discovered ? '#00ff00' : '#555'}; font-family: 'Share Tech Mono', monospace;">
+                                    ${discovered ? skill.description : 'Non découvert'}
+                                </div>
+                                <div style="font-size: 8px; color: #888; margin-top: 5px;">
+                                    ${categoryName}
+                                </div>
+                            </div>
+                        `;
+                    });
+                });
+                
+                html += `</div>
+                    <div style="text-align: center; margin-top: 20px; font-size: 11px; color: #00ffff;">
+                         Explorez les forêts et ouvrez des coffres / battez des monstres pour découvrir toutes les compétences !
+                    </div>
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button onclick="document.getElementById('skills-inventory').style.display='none'" style="
+                            background: linear-gradient(135deg, #ff00ff, #00ffff);
+                            border: none;
+                            padding: 10px 20px;
+                            color: #000;
+                            font-family: 'Orbitron', sans-serif;
+                            font-weight: bold;
+                            cursor: pointer;
+                            font-size: 12px;
+                            letter-spacing: 1px;
+                        ">FERMER [ESC / I]</button>
+                    </div>
+                `;
+                
+                inventory.innerHTML = html;
+            } else {
+                // Masquer l'inventaire
+                inventory.style.display = 'none';
+            }
+        }
+        
+        function createWorldParticles(x, y, z, color, count) {
+            for (let i = 0; i < count; i++) {
+                const particleGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+                const particleMaterial = new THREE.MeshBasicMaterial({ color: color });
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                
+                particle.position.set(x, y, z);
+                particle.userData = {
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: Math.random() * 0.3,
+                    vz: (Math.random() - 0.5) * 0.3,
+                    life: 60
+                };
+                
+                scene.add(particle);
+                
+                // Auto-destruction
+                const particleInterval = setInterval(() => {
+                    particle.userData.life--;
+                    particle.position.x += particle.userData.vx;
+                    particle.position.y += particle.userData.vy;
+                    particle.position.z += particle.userData.vz;
+                    particle.userData.vy -= 0.01; // Gravité
+                    
+                    particle.material.opacity = particle.userData.life / 60;
+                    
+                    if (particle.userData.life <= 0) {
+                        scene.remove(particle);
+                        clearInterval(particleInterval);
+                    }
+                }, 16);
+            }
+        }
+        
+        function updateMonsters() {
+            monsters.forEach(monster => {
+                // Réduire le cooldown
+                if (monster.userData.hitCooldown > 0) {
+                    monster.userData.hitCooldown--;
+                }
+                
+                // Mouvement simple
+                monster.userData.movePattern += 0.02;
+                monster.rotation.y += 0.01;
+                
+                // Faire bouger légèrement le monstre
+                const baseX = monster.position.x;
+                const baseZ = monster.position.z;
+                monster.position.x = baseX + Math.sin(monster.userData.movePattern) * 0.05;
+                monster.position.z = baseZ + Math.cos(monster.userData.movePattern) * 0.05;
+            });
+        }
+        
+        // ============= MINI-JEUX =============
+        
+        function startMiniGame(gameType) {
+            if (miniGameActive) return;
+            
+            miniGameActive = true;
+            const container = document.getElementById('minigame-container');
+            const canvas = document.getElementById('minigame-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            container.classList.add('active');
+            
+            if (gameType === 'trading') {
+                startTradingGame(ctx, canvas);
+            } else if (gameType === 'platformer') {
+                startPlatformerGame(ctx, canvas);
+            }
+        }
+        
+        function closeMiniGame() {
+            miniGameActive = false;
+            document.getElementById('minigame-container').classList.remove('active');
+            
+            // Nettoyer l'animation
+            if (miniGameData.animationId) {
+                cancelAnimationFrame(miniGameData.animationId);
+            }
+            
+            // Nettoyer les event listeners si défini
+            if (miniGameData.cleanup) {
+                miniGameData.cleanup();
+            }
+            
+            // Réinitialiser les données
+            miniGameData = {};
+            
+            // Restaurer le curseur normal dans le canvas
+            document.body.style.cursor = 'default';
+        }
+        
+        // MINI-JEU 1 : Trading (attraper les bonnes chandelles)
+        function startTradingGame(ctx, canvas) {
+            document.getElementById('minigame-title').textContent = 'TRADING SIMULATOR';
+            document.getElementById('minigame-instructions').innerHTML = 
+                '<strong>OBJECTIF:</strong> Cliquez sur les chandelles <span style="color: #00ff00;">VERTES</span> pour acheter !<br>' +
+                'Evitez les <span style="color: #ff0000;">ROUGES</span> qui font perdre des points !<br>' +
+                '<em style="color: #00ffff;">+10 points par verte • -5 points par rouge • -3 si verte ratee</em>';
+            
+            // Libérer le pointer lock pour permettre la souris
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+            
+            miniGameData = {
+                score: 0,
+                candles: [],
+                gameTime: 30,
+                startTime: Date.now(),
+                mouseX: 0,
+                mouseY: 0,
+                particles: [],
+                combo: 0,
+                bestCombo: 0,
+                level: 1
+            };
+            
+            // Générer des chandelles avec difficulté progressive
+            function spawnCandle() {
+                if (!miniGameActive) return;
+                
+                const isGreen = Math.random() > 0.35;
+                const speed = 2 + Math.random() * (2 + miniGameData.level * 0.5);
+                
+                miniGameData.candles.push({
+                    x: Math.random() * (canvas.width - 60) + 30,
+                    y: -40,
+                    speed: speed,
+                    isGreen: isGreen,
+                    width: 35,
+                    height: 60,
+                    clicked: false,
+                    glow: 0
+                });
+                
+                const spawnDelay = Math.max(400, 1000 - miniGameData.level * 100);
+                setTimeout(spawnCandle, spawnDelay + Math.random() * 800);
+            }
+            
+            spawnCandle();
+            
+            // Créer une particule d'explosion
+            function createParticles(x, y, color, count = 15) {
+                for (let i = 0; i < count; i++) {
+                    miniGameData.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        life: 1,
+                        color: color,
+                        size: 3 + Math.random() * 3
+                    });
+                }
+            }
+            
+            // IMPORTANT: Tracker la position de la souris
+            const mouseMoveHandler = (e) => {
+                if (!miniGameActive) return;
+                const rect = canvas.getBoundingClientRect();
+                miniGameData.mouseX = e.clientX - rect.left;
+                miniGameData.mouseY = e.clientY - rect.top;
+            };
+            canvas.addEventListener('mousemove', mouseMoveHandler);
+            
+            // Gestion du clic avec feedback visuel
+            const clickHandler = (e) => {
+                if (!miniGameActive) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                
+                let hitSomething = false;
+                
+                miniGameData.candles.forEach(candle => {
+                    if (!candle.clicked &&
+                        clickX > candle.x - candle.width / 2 &&
+                        clickX < candle.x + candle.width / 2 &&
+                        clickY > candle.y - candle.height / 2 &&
+                        clickY < candle.y + candle.height / 2) {
+                        
+                        candle.clicked = true;
+                        hitSomething = true;
+                        
+                        if (candle.isGreen) {
+                            miniGameData.score += 10;
+                            miniGameData.combo++;
+                            if (miniGameData.combo > miniGameData.bestCombo) {
+                                miniGameData.bestCombo = miniGameData.combo;
+                            }
+                            createParticles(candle.x, candle.y, '#00ff00', 20);
+                        } else {
+                            miniGameData.score -= 5;
+                            miniGameData.combo = 0;
+                            createParticles(candle.x, candle.y, '#ff0000', 15);
+                        }
+                        
+                        // Niveau up tous les 50 points
+                        miniGameData.level = Math.floor(miniGameData.score / 50) + 1;
+                    }
+                });
+                
+                // Effet de clic raté
+                if (!hitSomething) {
+                    createParticles(clickX, clickY, '#666666', 5);
+                }
+            };
+            canvas.onclick = clickHandler;
+            
+            // Nettoyer les event listeners quand le jeu se ferme
+            miniGameData.cleanup = () => {
+                canvas.removeEventListener('mousemove', mouseMoveHandler);
+                canvas.onclick = null;
+            };
+            
+            // Boucle de jeu améliorée
+            function tradingLoop() {
+                if (!miniGameActive) return;
+                
+                // Fond avec dégradé
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#000510');
+                gradient.addColorStop(1, '#1a0033');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Grille de fond animée
+                ctx.strokeStyle = '#330066';
+                ctx.lineWidth = 1;
+                const offset = (Date.now() / 50) % 30;
+                
+                for (let i = -30; i < canvas.width + 30; i += 30) {
+                    ctx.beginPath();
+                    ctx.moveTo(i + offset, 0);
+                    ctx.lineTo(i + offset, canvas.height);
+                    ctx.stroke();
+                }
+                for (let i = -30; i < canvas.height + 30; i += 30) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i + offset);
+                    ctx.lineTo(canvas.width, i + offset);
+                    ctx.stroke();
+                }
+                
+                // Mettre à jour et dessiner les chandelles
+                miniGameData.candles = miniGameData.candles.filter(candle => {
+                    candle.y += candle.speed;
+                    candle.glow = Math.sin(Date.now() / 200 + candle.y) * 0.5 + 0.5;
+                    
+                    if (candle.y > canvas.height + 40) {
+                        if (!candle.clicked && candle.isGreen) {
+                            miniGameData.score -= 3;
+                            miniGameData.combo = 0;
+                        }
+                        return false;
+                    }
+                    
+                    // Ombre portée
+                    ctx.shadowColor = candle.isGreen ? '#00ff00' : '#ff0000';
+                    ctx.shadowBlur = candle.clicked ? 5 : 15 + candle.glow * 10;
+                    
+                    // Corps de la chandelle
+                    ctx.fillStyle = candle.clicked ? '#333333' : (candle.isGreen ? '#00ff00' : '#ff0000');
+                    ctx.fillRect(candle.x - 17, candle.y - 30, 34, 60);
+                    
+                    // Bordure néon
+                    ctx.strokeStyle = candle.isGreen ? '#00ffff' : '#ff00ff';
+                    ctx.lineWidth = candle.clicked ? 1 : 2 + candle.glow * 2;
+                    ctx.strokeRect(candle.x - 17, candle.y - 30, 34, 60);
+                    
+                    // Mèche haute et basse
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(candle.x, candle.y - 45);
+                    ctx.lineTo(candle.x, candle.y + 45);
+                    ctx.stroke();
+                    
+                    // Icône
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.fillText(candle.isGreen ? '▲' : '▼', candle.x - 8, candle.y + 8);
+                    
+                    ctx.shadowBlur = 0;
+                    return true;
+                });
+                
+                // Particules
+                miniGameData.particles = miniGameData.particles.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.2; // Gravité
+                    p.life -= 0.02;
+                    
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life;
+                    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+                    ctx.globalAlpha = 1;
+                    
+                    return p.life > 0;
+                });
+                
+                // Afficher le combo
+                if (miniGameData.combo > 0) {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.font = 'bold 32px Orbitron';
+                    ctx.shadowColor = '#ffff00';
+                    ctx.shadowBlur = 20;
+                    ctx.fillText(`COMBO x${miniGameData.combo}`, canvas.width / 2 - 80, 50);
+                    ctx.shadowBlur = 0;
+                }
+                
+                // Stats
+                const elapsed = (Date.now() - miniGameData.startTime) / 1000;
+                const remaining = Math.max(0, miniGameData.gameTime - elapsed);
+                
+                document.getElementById('stat-timer').textContent = `TIME TEMPS: ${remaining.toFixed(1)}s`;
+                document.getElementById('stat-level').textContent = ` NIVEAU: ${miniGameData.level}`;
+                document.getElementById('minigame-score').textContent = `SCORE: ${miniGameData.score} CHEST`;
+                
+                if (remaining > 0) {
+                    miniGameData.animationId = requestAnimationFrame(tradingLoop);
+                } else {
+                    // Écran de fin
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.fillStyle = '#ff00ff';
+                    ctx.font = 'bold 48px Orbitron';
+                    ctx.shadowColor = '#ff00ff';
+                    ctx.shadowBlur = 30;
+                    ctx.fillText('TERMINÉ!', canvas.width / 2 - 110, canvas.height / 2 - 40);
+                    
+                    ctx.fillStyle = '#00ffff';
+                    ctx.font = 'bold 32px Orbitron';
+                    ctx.fillText(`Score final: ${miniGameData.score}`, canvas.width / 2 - 130, canvas.height / 2 + 20);
+                    
+                    ctx.font = '24px Orbitron';
+                    ctx.fillText(`Meilleur combo: x${miniGameData.bestCombo}`, canvas.width / 2 - 140, canvas.height / 2 + 60);
+                    ctx.shadowBlur = 0;
+                }
+            }
+            
+            tradingLoop();
+        }
+        
+        // MINI-JEU 2 : Platformer (atteindre le drapeau)
+        function startPlatformerGame(ctx, canvas) {
+            document.getElementById('minigame-title').textContent = 'GAME PIXEL JUMPER';
+            document.getElementById('minigame-instructions').innerHTML = 
+                '<strong>SKILLS MISSION :</strong> Atteignez le drapeau vert !<br>' +
+                '<strong>⌨️ CONTRÔLES :</strong> ESPACE pour sauter • FLÈCHES ← → pour bouger<br>' +
+                '<em style="color: #ff0000;">⚠️ ATTENTION : Évitez les piques rouges mortels !</em>';
+            
+            miniGameData = {
+                player: {
+                    x: 50,
+                    y: canvas.height - 90,
+                    width: 24,
+                    height: 24,
+                    velocityY: 0,
+                    velocityX: 0,
+                    onGround: false,
+                    trail: []
+                },
+                platforms: [
+                    { x: 0, y: canvas.height - 40, width: 220, height: 40, color: '#00ffff' },
+                    { x: 280, y: canvas.height - 90, width: 120, height: 40, color: '#ff00ff' },
+                    { x: 450, y: canvas.height - 140, width: 120, height: 40, color: '#00ffff' },
+                    { x: 600, y: canvas.height - 190, width: 80, height: 40, color: '#ff00ff' }
+                ],
+                spikes: [
+                    { x: 220, y: canvas.height - 60, size: 24 },
+                    { x: 400, y: canvas.height - 100, size: 24 },
+                    { x: 570, y: canvas.height - 150, size: 24 }
+                ],
+                coins: [
+                    { x: 350, y: canvas.height - 140, collected: false },
+                    { x: 500, y: canvas.height - 190, collected: false },
+                    { x: 630, y: canvas.height - 240, collected: false }
+                ],
+                goal: { x: 610, y: canvas.height - 230, size: 35 },
+                particles: [],
+                won: false,
+                lost: false,
+                jumps: 0,
+                coinsCollected: 0,
+                startTime: Date.now()
+            };
+            
+            const jumpKey = { pressed: false };
+            
+            const keyHandler = (e) => {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    jumpKey.pressed = e.type === 'keydown';
+                }
+            };
+            
+            document.addEventListener('keydown', keyHandler);
+            document.addEventListener('keyup', keyHandler);
+            
+            function createParticles(x, y, color, count = 10) {
+                for (let i = 0; i < count; i++) {
+                    miniGameData.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: Math.random() * -5,
+                        life: 1,
+                        color: color,
+                        size: 2 + Math.random() * 3
+                    });
+                }
+            }
+            
+            function platformerLoop() {
+                if (!miniGameActive) {
+                    document.removeEventListener('keydown', keyHandler);
+                    document.removeEventListener('keyup', keyHandler);
+                    return;
+                }
+                
+                const player = miniGameData.player;
+                
+                // Physique
+                player.velocityY += 0.6; // Gravité
+                
+                if (keys['ArrowLeft']) player.velocityX = -4;
+                else if (keys['ArrowRight']) player.velocityX = 4;
+                else player.velocityX *= 0.85;
+                
+                if (jumpKey.pressed && player.onGround) {
+                    player.velocityY = -14;
+                    player.onGround = false;
+                    miniGameData.jumps++;
+                    createParticles(player.x + player.width / 2, player.y + player.height, '#00ffff', 8);
+                }
+                
+                player.x += player.velocityX;
+                player.y += player.velocityY;
+                
+                // Trail effect
+                player.trail.push({ x: player.x, y: player.y, life: 1 });
+                if (player.trail.length > 8) player.trail.shift();
+                
+                // Collision avec les plateformes
+                player.onGround = false;
+                miniGameData.platforms.forEach(platform => {
+                    if (player.x + player.width > platform.x &&
+                        player.x < platform.x + platform.width &&
+                        player.y + player.height > platform.y &&
+                        player.y + player.height < platform.y + 20 &&
+                        player.velocityY > 0) {
+                        
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        player.onGround = true;
+                    }
+                });
+                
+                // Collision avec les piques
+                miniGameData.spikes.forEach(spike => {
+                    if (player.x + player.width > spike.x &&
+                        player.x < spike.x + spike.size &&
+                        player.y + player.height > spike.y &&
+                        player.y < spike.y + spike.size) {
+                        miniGameData.lost = true;
+                        createParticles(player.x + player.width / 2, player.y + player.height / 2, '#ff0000', 30);
+                    }
+                });
+                
+                // Collision avec les pièces
+                miniGameData.coins.forEach(coin => {
+                    if (!coin.collected &&
+                        player.x + player.width > coin.x - 10 &&
+                        player.x < coin.x + 10 &&
+                        player.y + player.height > coin.y - 10 &&
+                        player.y < coin.y + 10) {
+                        coin.collected = true;
+                        miniGameData.coinsCollected++;
+                        createParticles(coin.x, coin.y, '#ffff00', 15);
+                    }
+                });
+                
+                // Objectif atteint
+                if (player.x + player.width > miniGameData.goal.x &&
+                    player.x < miniGameData.goal.x + miniGameData.goal.size &&
+                    player.y + player.height > miniGameData.goal.y &&
+                    player.y < miniGameData.goal.y + miniGameData.goal.size) {
+                    miniGameData.won = true;
+                    createParticles(miniGameData.goal.x + 15, miniGameData.goal.y + 15, '#00ff00', 40);
+                }
+                
+                // Mort par chute
+                if (player.y > canvas.height) {
+                    miniGameData.lost = true;
+                }
+                
+                // === DESSIN ===
+                
+                // Fond dégradé
+                const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                bgGradient.addColorStop(0, '#1a0033');
+                bgGradient.addColorStop(1, '#000510');
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Grille décorative
+                ctx.strokeStyle = 'rgba(102, 0, 255, 0.2)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < canvas.width; i += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i, canvas.height);
+                    ctx.stroke();
+                }
+                
+                // Plateformes avec effet brillant
+                miniGameData.platforms.forEach((platform, i) => {
+                    const glow = Math.sin(Date.now() / 500 + i) * 0.3 + 0.7;
+                    
+                    // Ombre
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.fillRect(platform.x + 4, platform.y + 4, platform.width, platform.height);
+                    
+                    // Plateforme
+                    ctx.fillStyle = platform.color;
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Bordure animée
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = glow;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.globalAlpha = 1;
+                    
+                    // Détails pixel art
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    for (let x = 0; x < platform.width; x += 8) {
+                        ctx.fillRect(platform.x + x, platform.y, 4, 4);
+                    }
+                });
+                
+                // Piques animés
+                miniGameData.spikes.forEach((spike, i) => {
+                    const pulse = Math.sin(Date.now() / 300 + i) * 5;
+                    
+                    ctx.shadowColor = '#ff0000';
+                    ctx.shadowBlur = 15 + pulse;
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.moveTo(spike.x, spike.y + spike.size);
+                    ctx.lineTo(spike.x + spike.size / 2, spike.y - 5 + pulse);
+                    ctx.lineTo(spike.x + spike.size, spike.y + spike.size);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    
+                    // Bordure
+                    ctx.strokeStyle = '#ff00ff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+                
+                // Pièces (non collectées)
+                miniGameData.coins.forEach((coin, i) => {
+                    if (coin.collected) return;
+                    
+                    const bounce = Math.sin(Date.now() / 300 + i) * 5;
+                    const rotation = (Date.now() / 1000 + i) % (Math.PI * 2);
+                    
+                    ctx.save();
+                    ctx.translate(coin.x, coin.y + bounce);
+                    ctx.rotate(rotation);
+                    
+                    ctx.shadowColor = '#ffff00';
+                    ctx.shadowBlur = 20;
+                    ctx.fillStyle = '#ffff00';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#ff9900';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.shadowBlur = 0;
+                    ctx.restore();
+                });
+                
+                // Drapeau objectif
+                const flagWave = Math.sin(Date.now() / 200) * 3;
+                ctx.fillStyle = '#00ff00';
+                ctx.shadowColor = '#00ff00';
+                ctx.shadowBlur = 20;
+                ctx.fillRect(miniGameData.goal.x, miniGameData.goal.y, 6, miniGameData.goal.size);
+                
+                ctx.beginPath();
+                ctx.moveTo(miniGameData.goal.x + 6, miniGameData.goal.y);
+                ctx.lineTo(miniGameData.goal.x + 30 + flagWave, miniGameData.goal.y + 12);
+                ctx.lineTo(miniGameData.goal.x + 6, miniGameData.goal.y + 24);
+                ctx.closePath();
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Trail du joueur
+                player.trail.forEach((pos, i) => {
+                    ctx.fillStyle = `rgba(255, 0, 255, ${i / 8 * 0.5})`;
+                    ctx.fillRect(pos.x, pos.y, player.width, player.height);
+                });
+                
+                // Joueur avec animation
+                const playerPulse = Math.sin(Date.now() / 100) * 2;
+                ctx.shadowColor = '#ff00ff';
+                ctx.shadowBlur = 15 + playerPulse;
+                ctx.fillStyle = '#ff00ff';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(player.x, player.y, player.width, player.height);
+                
+                // Yeux du joueur
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(player.x + 6, player.y + 8, 4, 4);
+                ctx.fillRect(player.x + 14, player.y + 8, 4, 4);
+                
+                // Particules
+                miniGameData.particles = miniGameData.particles.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.3;
+                    p.life -= 0.02;
+                    
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life;
+                    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+                    ctx.globalAlpha = 1;
+                    
+                    return p.life > 0;
+                });
+                
+                // HUD Stats
+                const timeElapsed = ((Date.now() - miniGameData.startTime) / 1000).toFixed(1);
+                document.getElementById('stat-timer').textContent = `TIME TEMPS: ${timeElapsed}s`;
+                document.getElementById('stat-level').textContent = `🪙 PIÈCES: ${miniGameData.coinsCollected}/3`;
+                
+                // Messages de fin
+                if (miniGameData.won) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = 'bold 56px Orbitron';
+                    ctx.shadowColor = '#00ff00';
+                    ctx.shadowBlur = 40;
+                    ctx.fillText('VICTOIRE! SUCCESS', canvas.width / 2 - 170, canvas.height / 2 - 30);
+                    
+                    ctx.fillStyle = '#00ffff';
+                    ctx.font = 'bold 28px Orbitron';
+                    ctx.fillText(`Temps: ${timeElapsed}s • Sauts: ${miniGameData.jumps}`, canvas.width / 2 - 180, canvas.height / 2 + 30);
+                    
+                    ctx.font = '22px Orbitron';
+                    ctx.fillText(`Pièces: ${miniGameData.coinsCollected}/3`, canvas.width / 2 - 80, canvas.height / 2 + 70);
+                    ctx.shadowBlur = 0;
+                    
+                    document.getElementById('minigame-score').textContent = '🏆 MISSION ACCOMPLIE!';
+                } else if (miniGameData.lost) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = 'bold 56px Orbitron';
+                    ctx.shadowColor = '#ff0000';
+                    ctx.shadowBlur = 40;
+                    ctx.fillText('GAME OVER', canvas.width / 2 - 160, canvas.height / 2);
+                    
+                    ctx.fillStyle = '#ff00ff';
+                    ctx.font = '24px Orbitron';
+                    ctx.fillText('Réessayez pour atteindre le drapeau!', canvas.width / 2 - 190, canvas.height / 2 + 50);
+                    ctx.shadowBlur = 0;
+                    
+                    document.getElementById('minigame-score').textContent = '💀 Réessayez!';
+                } else {
+                    miniGameData.animationId = requestAnimationFrame(platformerLoop);
+                }
+            }
+            
+            platformerLoop();
+        }
+        
+        function handleInput() {
+            const acceleration = 0.015;
+            const maxSpeed = 0.8; // Vitesse max réduite pour plus de contrôle
+            const friction = 0.95;
+            
+            // ===== CONTRÔLE CAMÉRA FPS STYLE (YAW/PITCH) =====
+            // Système de rotation FPS naturel avec axes séparés
+            if (!altPressed) {
+                // Sensibilité de la souris
+                const sensitivity = 0.002;
+                
+                // YAW (rotation horizontale autour de l'axe Y mondial)
+                // Souris droite = tourner à droite, souris gauche = tourner à gauche
+                freeCameraRotationY -= mouseX * sensitivity;
+                
+                // PITCH (rotation verticale - tête qui monte/descend)
+                // Souris HAUT = regarder vers le HAUT, souris BAS = regarder vers le BAS
+                freeCameraRotationX -= mouseY * sensitivity;
+                
+                // Limiter UNIQUEMENT le pitch (vertical) pour éviter de se retourner
+                freeCameraRotationX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, freeCameraRotationX));
+                
+                // Reset des deltas de souris
+                mouseX = 0;
+                mouseY = 0;
+            }
+            
+            // ===== APPLICATION DES ROTATIONS EN MODE FPS =====
+            // Important : On ne touche PAS à camera.rotation.z (pas de roulis involontaire)
+            // On applique d'abord le YAW (Y), puis le PITCH (X)
+            camera.rotation.order = 'YXZ'; // Ordre crucial pour FPS naturel
+            camera.rotation.y = freeCameraRotationY; // Rotation horizontale
+            camera.rotation.x = freeCameraRotationX; // Rotation verticale
+            camera.rotation.z = 0; // Pas de roulis (caméra toujours droite)
+            
+            // ===== DÉPLACEMENT ALIGNÉ AVEC LA DIRECTION DE LA CAMÉRA =====
+            // Le mouvement suit où on regarde (comme un vrai FPS)
+            let moveX = 0;
+            let moveZ = 0;
+            
+            // Calculer la direction "forward" en fonction du YAW uniquement
+            // (on ne veut pas voler vers le haut quand on regarde en haut)
+            const forwardX = -Math.sin(freeCameraRotationY);
+            const forwardZ = -Math.cos(freeCameraRotationY);
+            
+            // Calculer la direction "right" (perpendiculaire à forward)
+            const rightX = Math.cos(freeCameraRotationY);
+            const rightZ = -Math.sin(freeCameraRotationY);
+            
+            // Flèche HAUT ou Z = avancer dans la direction où on regarde (horizontalement)
+            if (keys['ArrowUp'] || keys['z'] || keys['Z']) {
+                moveZ = forwardZ * acceleration;
+                moveX = forwardX * acceleration;
+                cameraSpeed = Math.min(cameraSpeed + acceleration, maxSpeed);
+                headBobActive = true;
+            } else if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+                // Flèche BAS ou S = reculer
+                moveZ = -forwardZ * acceleration;
+                moveX = -forwardX * acceleration;
+                cameraSpeed = Math.max(cameraSpeed - acceleration, -maxSpeed);
+                headBobActive = true;
+            } else {
+                cameraSpeed *= friction;
+            }
+            
+            // Strafing (déplacement latéral) avec flèches gauche/droite ou Q/D
+            if (keys['ArrowLeft'] || keys['q'] || keys['Q']) {
+                // Strafe gauche
+                moveX -= rightX * acceleration;
+                moveZ -= rightZ * acceleration;
+                cameraSpeed = Math.min(Math.abs(cameraSpeed) + acceleration, maxSpeed);
+                headBobActive = true;
+            }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                // Strafe droite
+                moveX += rightX * acceleration;
+                moveZ += rightZ * acceleration;
+                cameraSpeed = Math.min(Math.abs(cameraSpeed) + acceleration, maxSpeed);
+                headBobActive = true;
+            }
+            
+            // Si aucun mouvement, désactiver le head bobbing
+            if (moveX === 0 && moveZ === 0) {
+                headBobActive = false;
+                headBobTime = 0;
+            }
+            
+            if (Math.abs(cameraSpeed) < 0.001) cameraSpeed = 0;
+            
+            // Appliquer le mouvement dans la direction de la caméra AVEC COLLISION
+            if (moveZ !== 0 || moveX !== 0) {
+                const moveAmount = Math.abs(cameraSpeed) * 20;
+                const newCameraPosition = cameraPosition + moveZ * moveAmount;
+                const newFreeCameraX = freeCameraX + moveX * moveAmount;
+                
+                // Coordonnées mondiales du joueur
+                const worldX = newFreeCameraX;
+                const worldY = baseCameraY + freeCameraY;
+                const worldZ = newCameraPosition;
+                
+                // Vérifier collision avec le nouveau système AABB
+                const collision = checkCollision(worldX, worldY, worldZ, 1);
+                
+                if (!collision) {
+                    // Pas de collision - mouvement libre
+                    cameraPosition = newCameraPosition;
+                    freeCameraX = newFreeCameraX;
+                } else {
+                    // Collision détectée ! Glisser le long de l'obstacle
+                    const resolved = resolveCollision(
+                        freeCameraX, worldY, cameraPosition,
+                        worldX, worldY, worldZ,
+                        collision, 1
+                    );
+                    
+                    freeCameraX = resolved.x;
+                    cameraPosition = resolved.z;
+                }
+            }
+            
+            // Les flèches gauche/droite font du strafe, pas de roulis
+            // (comportement FPS naturel sans inclinaison de caméra)
+            
+            // ===== SYSTÈME DE SAUT =====
+            const groundLevel = 2; // Sol au niveau Y=2 (hauteur des yeux du joueur debout)
+            
+            if (keys[' '] && !isJumping && (baseCameraY + freeCameraY) <= groundLevel + 0.1) {
+                isJumping = true;
+                jumpVelocity = jumpPower;
+            }
+            
+            // Appliquer la gravité et le saut
+            if (isJumping || (baseCameraY + freeCameraY) > groundLevel) {
+                jumpVelocity -= gravity;
+                freeCameraY += jumpVelocity * 0.1;
+                
+                // Vérifier si on touche le sol - COLLISION SOLIDE
+                if (baseCameraY + freeCameraY <= groundLevel) {
+                    freeCameraY = groundLevel - baseCameraY;
+                    jumpVelocity = 0;
+                    isJumping = false;
+                }
+            }
+            
+            // ===== HEAD BOBBING (Balancement de tête en marchant) =====
+            let headBobOffset = 0;
+            if (headBobActive && !isJumping) {
+                // Incrémenter le temps du balancement
+                headBobTime += headBobSpeed;
+                
+                // Calculer le balancement vertical (sin pour mouvement fluide)
+                // Utilise sin(2*t) pour 2 oscillations par cycle de marche
+                headBobOffset = Math.sin(headBobTime * 2) * headBobIntensity;
+                
+                // Ajouter un léger balancement latéral
+                const lateralBob = Math.sin(headBobTime) * 0.03;
+                freeCameraX += lateralBob;
+            } else {
+                // Réinitialiser progressivement le temps quand arrêté
+                headBobTime *= 0.9;
+            }
+            
+            // Appliquer le head bobbing à la caméra
+            freeCameraY += headBobOffset;
+            
+            // EMPÊCHER d'aller trop loin (limites du monde)
+            if (cameraPosition < -maxPosition) {
+                cameraPosition = -maxPosition;
+                cameraSpeed = 0;
+            }
+            if (cameraPosition > maxPosition) {
+                cameraPosition = maxPosition;
+                cameraSpeed = 0;
+            }
+            
+            // Limiter le mouvement latéral
+            freeCameraX = Math.max(-70, Math.min(70, freeCameraX));
+            
+            // COLLISION AVEC LES SOLS DES FORÊTS - SOL SOLIDE INFRANCHISSABLE
+            const forestGroundLevel = 2; // Hauteur minimum dans les forêts (debout sur le sol)
+            
+            // Forêt enchantée (gauche)
+            if (freeCameraX < -5 && freeCameraX > -75 &&
+                cameraPosition < 25 && cameraPosition > -220) {
+                if (baseCameraY + freeCameraY < forestGroundLevel) {
+                    freeCameraY = forestGroundLevel - baseCameraY;
+                    jumpVelocity = 0;
+                    isJumping = false;
+                }
+            }
+            
+            // Forêt sombre (droite)
+            if (freeCameraX > 5 && freeCameraX < 75 &&
+                cameraPosition < 25 && cameraPosition > -220) {
+                if (baseCameraY + freeCameraY < forestGroundLevel) {
+                    freeCameraY = forestGroundLevel - baseCameraY;
+                    jumpVelocity = 0;
+                    isJumping = false;
+                }
+            }
+            
+            // SOL PRINCIPAL GLOBAL - Empêcher de descendre sous Y=2 partout
+            if (baseCameraY + freeCameraY < groundLevel) {
+                freeCameraY = groundLevel - baseCameraY;
+                jumpVelocity = 0;
+                isJumping = false;
+            }
+            
+            // Appliquer toutes les positions
+            camera.position.z = cameraPosition;
+            camera.position.x = freeCameraX;
+            camera.position.y = baseCameraY + freeCameraY;
+            
+            // Mise à jour de l'UI
+            const displaySpeed = Math.abs(cameraSpeed * 50).toFixed(0);
+            document.getElementById('speed').textContent = displaySpeed;
+            
+            const progress = ((cameraPosition + maxPosition) / (maxPosition * 2)) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updateFPS();
+            handleInput();
+            updateStarField();
+            checkSkillProximity();
+            checkInteractions();
+            updateMonsters();
+            
+            // Animations des hologrammes
+            skillHolograms.forEach((hologram, index) => {
+                hologram.rotation.y += 0.005;
+                
+                const particles = hologram.userData.particles;
+                particles.rotation.z += 0.01;
+                
+                // Effet de pulsation
+                const scale = 1 + Math.sin(Date.now() * 0.001 + index) * 0.05;
+                hologram.scale.set(scale, scale, scale);
+            });
+            
+            // Animation du cockpit
+            cockpitGroup.children.forEach((child, index) => {
+                if (child.geometry && child.geometry.type === 'CylinderGeometry') {
+                    child.material.emissiveIntensity = 0.5 + Math.sin(Date.now() * 0.003 + index) * 0.3;
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Démarrage
+        init();
+    </script>
+</body>
+</html>
